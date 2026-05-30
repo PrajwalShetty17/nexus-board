@@ -3,130 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus Board Task Management System - Enterprise Core</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .code-font { font-family: 'JetBrains Mono', monospace; }
-        .board-column { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
-        .column-drag-over { background-color: #e2e8f0; border-color: #6366f1; border-style: dashed; }
-        .task-card { transition: transform 0.2s, box-shadow 0.2s; cursor: grab; }
-        .task-card:active { cursor: grabbing; transform: scale(0.98); }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    </style>
+    <title>Nexus Board Pro</title>
+    <link rel="stylesheet" href="lol.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="project.js" defer></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen antialiased">
-
-    <header class="bg-slate-950 border-b border-slate-800 sticky top-0 z-50 px-6 py-4">
-        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="flex items-center space-x-3">
-                <div class="bg-indigo-600 p-2.5 rounded-xl text-white font-bold tracking-wider text-xl shadow-lg shadow-indigo-500/20">Ω</div>
-                <div>
-                    <h1 class="text-lg font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">NEXUS OPERATIONAL BOARD</h1>
-                    <p class="text-xs text-indigo-400 font-mono tracking-widest uppercase">Task Lifecycle & State Machine // BCS403</p>
+<body class="theme-space">
+    <div class="background-overlay" id="themeOverlay"></div>
+    <div class="doodle-pattern-overlay" id="doodleOverlay"></div>
+    <div id="toastNotificationContainer" class="toast-holder-zone"></div>
+    
+    <aside class="sidebar" id="sidebarNode">
+        <div class="user-profile-zone">
+            <div class="profile-avatar">PS</div>
+            <div class="profile-details">
+                <div class="username-wrapper">
+                    <span id="userNameDisplay" class="username-txt">Prajwal Shetty S</span>
+                    <button id="editNameBtn" class="edit-name-trigger" title="Edit Username"> ✏️ </button>
                 </div>
-            </div>
-            <div class="flex items-center space-x-4">
-                <div class="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 text-xs flex items-center space-x-2">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-slate-400 font-mono">Gateway System:</span>
-                    <span id="gateway-status" class="font-bold text-emerald-400 font-mono">ONLINE</span>
-                </div>
-                <div class="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 text-xs text-slate-400 font-mono">
-                    Buffered Logs: <span id="telemetry-count" class="text-indigo-400 font-bold">0</span>
-                </div>
+                <p class="user-role-lbl">Workspace Owner</p>
             </div>
         </div>
-    </header>
+        <div class="logo">
+            <div class="logo-circle"></div>
+            <div>
+                <h2>Nexus Board</h2>
+                <p>Intelligent Workspace</p>
+            </div>
+            <button class="mobile-toggle-close" id="menuCloseBtn">×</button>
+        </div>
 
-    <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        
-        <section class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-xl">
-            <h2 class="text-sm font-bold text-indigo-400 uppercase tracking-widest font-mono mb-4 flex items-center gap-2">
-                <span>⚡</span> Task Initialization Form Engine
-            </h2>
-            <form id="nexus-task-form" onsubmit="handleTaskSubmission(event)" class="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                <div class="lg:col-span-2">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Task Title Core Header</label>
-                    <input type="text" id="task-title" required placeholder="Write operational target parameters..." 
-                        class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
+        <nav class="sidebar-menu">
+            <button class="menu-item active" data-page="dashboard"> 📋  Workspace Board</button>
+            <button class="menu-item" data-page="boards"> 🗂️  Project Clusters</button>
+            <button class="menu-item" data-page="calendar"> 📅  Schedule & Lineup</button>
+            <button class="menu-item" data-page="analytics"> 📈  Productivity Analytics</button>
+            <button class="menu-item" data-page="activity"> ⚡ Historical Logs</button>
+            <button class="menu-item" data-page="themes"> 🌌  Workspace Themes</button>
+
+            <div class="backup-action-group-separator">
+                <button class="menu-item export-action-btn" id="exportStateBtn"> 📥  Backup Workspace</button>
+                <label for="importStateInput" class="menu-item import-action-label"> 📤  Restore Backup</label>
+                <input type="file" id="importStateInput" class="hidden-file-input" accept=".json">
+            </div>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="mobile-hud">
+            <button id="menuOpenBtn" class="hud-trigger"> ☰  Menu</button>
+            <h2 id="mobileHudTitle">Nexus Board: Prajwal Shetty S</h2>
+            <button id="mobileNewTaskBtn" class="hud-action-btn">+</button>
+        </div>
+
+        <section class="page active-page" id="dashboard-page">
+            <header class="topbar">
+                <div class="header-titles">
+                    <h1 id="greetingHeader">Welcome back, Prajwal Shetty S</h1>
+                    <p id="liveStatusSubtitle">Manage your projects and everyday actions.</p>
                 </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Priority Weight</label>
-                    <select id="task-priority" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                        <option value="low">Low Priority Matrix</option>
-                        <option value="medium" selected>Medium Operational</option>
-                        <option value="high">High Mission Critical</option>
-                    </select>
+                <div class="top-actions">
+                    <input type="text" id="searchInput" placeholder="Quick filter tasks...">
+                    <button id="newTaskBtn" class="primary-btn">+ Add New Task</button>
                 </div>
-                <div class="flex items-end">
-                    <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-lg shadow-indigo-600/20 active:scale-[0.98] transition-all">
-                        Commit Core Task
-                    </button>
+            </header>
+
+            <section class="stopwatch-container-row">
+                <div class="stopwatch-card">
+                    <div class="stopwatch-meta">
+                        <span class="timer-dot"></span>
+                        <h4>FOCUS SPRINT ENGINE</h4>
+                    </div>
+                    <div class="stopwatch-display" id="stopwatchDisplay">00:00:00</div>
+                    <div class="stopwatch-controls">
+                        <button class="sw-btn" id="swStartBtn"> ▶  Start Focus</button>
+                        <button class="sw-btn" id="swPauseBtn"> ⏸ Pause</button>
+                        <button class="sw-btn reset" id="swResetBtn"> 🔄  Reset Cycle</button>
+                    </div>
                 </div>
-            </form>
+            </section>
+
+            <section class="stats-grid">
+                <div class="stat-card"><h3 id="totalTasks">0</h3><p>Total Tasks</p></div>
+                <div class="stat-card"><h3 id="completedTasks">0</h3><p>Completed Tasks</p></div>
+                <div class="stat-card"><h3 id="pendingTasks">0</h3><p>Pending Tasks</p></div>
+                <div class="stat-card"><h3 id="completionRate">0%</h3><p>Completion Rate</p></div>
+            </section>
+
+            <section class="modes-container-row">
+                <div class="mode-selector-card">
+                    <div class="mode-header">
+                        <h4>WORKSPACE FOCUS PROFILE STATE</h4>
+                        <span class="mode-badge" id="currentModeBadge">GENERAL ACTIVE</span>
+                    </div>
+                    <div class="mode-buttons-strip">
+                        <button class="mode-btn active" data-mode="general"> 🌐  General View</button>
+                        <button class="mode-btn" data-mode="focus"> 🎯  Focus Mode</button>
+                        <button class="mode-btn" data-mode="dev"> ⚡ Tech Sandbox</button>
+                        <button class="mode-btn" data-mode="creative"> 🎨  Creative Mode</button>
+                        <button class="mode-btn" data-mode="cyberpunk"> 🤖  Cyber Sandbox</button>
+                        <button class="mode-btn" data-mode="zen"> 🍃  Zen Minimalist</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ai-bot-terminal-row">
+                <div class="terminal-container">
+                    <div class="terminal-header-bar">
+                        <span class="terminal-indicator-dot" id="botStatusDot"></span>
+                        <h4 id="botHeaderTitle">Zia • Cozy AI Workspace Partner</h4>
+                    </div>
+                    <div class="terminal-split-grid">
+                        <div class="terminal-input-panel">
+                            <textarea id="botInputField" placeholder="Say hello to Zia, or add a task! (e.g., 'add Complete UI polish /board:Nexus /priority:High')"></textarea>
+                            <button id="submitBotQueryBtn" class="terminal-run-action">TALK TO ZIA  ✦ </button>
+                        </div>
+                        <div class="terminal-output-panel">
+                            <div class="output-console-header">ZIA'S THOUGHT STREAM:</div>
+                            <pre id="botConsoleOutput">Hey there, boss! Zia is fully online, loaded into Nexus Board, and ready to dominate this project sprint with you. What are we building today?  ✨</pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="board-section">
+                <div class="board-column" data-status="backlog">
+                    <div class="column-title"><h3> 📥  BACKLOG</h3></div>
+                    <div class="task-container" id="backlog"></div>
+                </div>
+                <div class="board-column" data-status="progress">
+                    <div class="column-title"><h3> ⚙️  IN PROGRESS</h3></div>
+                    <div class="task-container" id="progress"></div>
+                </div>
+                <div class="board-column" data-status="review">
+                    <div class="column-title"><h3> 🔍  UNDER REVIEW</h3></div>
+                    <div class="task-container" id="review"></div>
+                </div>
+                <div class="board-column" data-status="completed">
+                    <div class="column-title"><h3> ✅ COMPLETED</h3></div>
+                    <div class="task-container" id="completed"></div>
+                </div>
+            </section>
+
+            <section class="trash-dropzone-row">
+                <div id="trashDropzone" class="trash-vault-card">
+                    <span class="trash-icon-anim"> 🗑️ </span>
+                    <p>DRAG CARDS HERE TO COMPLETELY PURGE THEM FROM THE ENGINE</p>
+                </div>
+            </section>
         </section>
 
-        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <div class="bg-slate-950 rounded-2xl border border-slate-800 flex flex-col max-h-[700px] shadow-lg">
-                <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 rounded-t-2xl">
-                    <div class="flex items-center space-x-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                        <h3 class="font-bold text-sm tracking-wide text-slate-200">TO-DO REGISTRY</h3>
-                    </div>
-                    <span id="count-todo" class="bg-slate-900 px-2 py-0.5 rounded text-xs font-mono font-bold text-slate-400 border border-slate-800">0</span>
-                </div>
-                <div id="col-todo" class="board-column p-4 space-y-4 overflow-y-auto flex-1 min-h-[150px]" ondragover="allowDropTransfer(event)" ondragleave="handleDragLeave(event)" ondrop="executeDropMutation(event, 'todo')">
-                    </div>
+        <section class="page" id="boards-page">
+            <div class="page-header">
+                <h2>Categorized Project Clusters</h2>
+                <p style="opacity:0.6; margin-bottom:20px;">Isolated project views collected automatically from your tags and metadata entries.</p>
             </div>
-
-            <div class="bg-slate-950 rounded-2xl border border-slate-800 flex flex-col max-h-[700px] shadow-lg">
-                <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 rounded-t-2xl">
-                    <div class="flex items-center space-x-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-                        <h3 class="font-bold text-sm tracking-wide text-slate-200">IN-FLIGHT EXECUTION</h3>
-                    </div>
-                    <span id="count-doing" class="bg-slate-900 px-2 py-0.5 rounded text-xs font-mono font-bold text-slate-400 border border-slate-800">0</span>
-                </div>
-                <div id="col-doing" class="board-column p-4 space-y-4 overflow-y-auto flex-1 min-h-[150px]" ondragover="allowDropTransfer(event)" ondragleave="handleDragLeave(event)" ondrop="executeDropMutation(event, 'doing')">
-                    </div>
-            </div>
-
-            <div class="bg-slate-950 rounded-2xl border border-slate-800 flex flex-col max-h-[700px] shadow-lg">
-                <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 rounded-t-2xl">
-                    <div class="flex items-center space-x-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                        <h3 class="font-bold text-sm tracking-wide text-slate-200">RESOLVED MATRIX</h3>
-                    </div>
-                    <span id="count-done" class="bg-slate-900 px-2 py-0.5 rounded text-xs font-mono font-bold text-slate-400 border border-slate-800">0</span>
-                </div>
-                <div id="col-done" class="board-column p-4 space-y-4 overflow-y-auto flex-1 min-h-[150px]" ondragover="allowDropTransfer(event)" ondragleave="handleDragLeave(event)" ondrop="executeDropMutation(event, 'done')">
-                    </div>
-            </div>
-            
+            <div class="boards-grid" id="boardsGrid"></div>
         </section>
 
-        <section class="bg-slate-950 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
-            <div class="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
-                <h3 class="text-xs font-bold text-slate-400 uppercase font-mono tracking-widest flex items-center gap-2">
-                    <span>🖥️</span> Nexus System Engine Live Telemetry Audit Streams
-                </h3>
-                <button onclick="clearConsoleLogs()" class="text-[10px] bg-slate-900 border border-slate-800 text-slate-400 font-mono px-2 py-1 rounded hover:bg-slate-800 transition-colors">Flush Terminal Buffer</button>
+        <section class="page" id="calendar-page">
+            <div class="page-header">
+                <h2>Schedule & Lineup</h2>
+                <p style="opacity:0.6; margin-bottom:20px;">Chronological lineup of all your tasks sorted by due dates.</p>
             </div>
-            <div id="system-telemetry-console" class="code-font p-4 bg-black h-40 overflow-y-auto text-xs text-emerald-400 space-y-1.5">
-                <div class="text-slate-500">[SYSTEM INIT] Awaiting instruction sets... Boot schema complete.</div>
+            <div class="calendar-box" id="calendarBox"></div>
+        </section>
+
+        <section class="page" id="analytics-page">
+            <div class="page-header">
+                <h2>Productivity Analytics</h2>
+                <p style="opacity:0.6; margin-bottom:20px;">Visual metrics breakdowns showing workspace velocity and task fulfillment rates.</p>
+            </div>
+            <div class="analytics-wrapper">
+                <canvas id="productivityChart"></canvas>
+            </div>
+        </section>
+
+        <section class="page" id="activity-page">
+            <div class="page-header">
+                <h2>Historical Change Stream</h2>
+                <p style="opacity:0.6; margin-bottom:20px;">A real-time historical stream tracking changes, modifications, and accomplishments.</p>
+            </div>
+            <div class="activity-feed" id="activityFeed"></div>
+        </section>
+
+        <section class="page" id="themes-page">
+            <div class="page-header">
+                <h2>Workspace Personalization</h2>
+                <p style="opacity:0.6; margin-bottom:20px;">Modify your workspace backdrop and environment skins dynamically.</p>
+            </div>
+            <div class="theme-grid">
+                <button class="theme-card" data-theme="theme-space"> 🌌  Void Space</button>
+                <button class="theme-card" data-theme="theme-jungle"> 🌿  Deep Jungle</button>
+                <button class="theme-card" data-theme="theme-ocean"> 🌊  Ocean Depths</button>
+                <button class="theme-card" data-theme="theme-sunset"> 🌇  Cyber Sunset</button>
+                <button class="theme-card" data-theme="theme-flowers"> 🌸  Cherry Blossom</button>
+                <button class="theme-card" data-theme="theme-carbon"> 🌑  Matte Carbon</button>
+                <button class="theme-card" data-theme="theme-aurora"> 🎆  Polar Aurora</button>
+                <button class="theme-card" data-theme="theme-cyberpunk"> 🤖  Neon Grid</button>
+                <button class="theme-card" data-theme="theme-nebula"> 🔮  Orion Nebula</button>
+                <button class="theme-card" data-theme="theme-glacier"> 🏔️  Arctic Glacier</button>
+                <button class="theme-card" data-theme="theme-desert"> 🏜️  Crimson Canyon</button>
+                <button class="theme-card" data-theme="theme-forest"> 🌲  Mystic Woods</button>
             </div>
         </section>
     </main>
 
-    <footer class="text-center text-[11px] text-slate-600 py-8 font-mono border-t border-slate-950 mt-12">
-        Nexus Operational Board Core Module V4.0.0 // Visvesvaraya Technological University Project Blueprint.
-    </footer>
+    <div id="taskModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Task Entry</h3>
+                <button id="closeModal" class="close-modal-btn">&times;</button>
+            </div>
 
-    <script src="nexus_core_logic.js"></script>
+            <input type="text" id="taskInput" placeholder="What needs to be done?">
+            <input type="text" id="tagsInput" placeholder="Tags (comma separated, e.g., Engine, Test)">
+            <input type="text" id="boardInput" placeholder="Project Board Name (e.g., VTU, Personal)">
+            <input type="date" id="dateInput">
+
+            <select id="priorityInput">
+                <option value="High"> 🔴  High Priority</option>
+                <option value="Medium"> 🟡  Medium Priority</option>
+                <option value="Low"> 🟢  Low Priority</option>
+            </select>
+            <div class="file-ingestion-zone">
+                <label for="modalFileInput" class="file-stub-label"> 📎  Attach Document or Asset File</label>
+                <input type="file" id="modalFileInput" class="hidden-file-input">
+                <div id="fileUploadStatus" class="upload-status-lbl">No local files linked.</div>
+            </div>
+            <button id="createTaskBtn" class="primary-btn full-width-btn">Save Task Entry</button>
+        </div>
+    </div>
 </body>
 </html>
