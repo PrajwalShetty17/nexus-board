@@ -3,154 +3,361 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flight Booking Management System - Optimized Engine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Nexus Board - Advanced Framework-Free Workspace Engine</title>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        
-        /* Smooth scale click effect for interactive buttons */
-        .interactive-element {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        /* --- CORE DESIGN REPOSITORY VARIABLES --- */
+        :root {
+            --base-font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --transition-velocity: 0.22s ease-in-out;
         }
-        .interactive-element:active:not(:disabled) {
-            transform: scale(0.95);
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--base-font-family);
+            background-color: var(--app-background);
+            color: var(--text-primary);
+            transition: background var(--transition-velocity), color var(--transition-velocity);
+            overflow-x: hidden;
+        }
+
+        /* --- THEME SKIN SPECIFICATION MATRICES --- */
+        .theme-focus-view {
+            --app-background: #ffffff;
+            --text-primary: #0f172a;
+            --header-background: #f8fafc;
+            --column-inner-bg: #f1f5f9;
+            --card-surface-bg: #ffffff;
+            --border-token-color: #cbd5e1;
+            --accent-glow: rgba(59, 130, 246, 0.1);
+        }
+
+        .theme-dev-view {
+            --base-font-family: 'JetBrains Mono', 'Courier New', monospace;
+            --app-background: #090d16;
+            --text-primary: #f8fafc;
+            --header-background: #0b132b;
+            --column-inner-bg: #1c2541;
+            --card-surface-bg: #0b132b;
+            --border-token-color: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.3);
+        }
+
+        .theme-cyberpunk {
+            --base-font-family: Impact, sans-serif;
+            --app-background: #000000;
+            --text-primary: #00ff66;
+            --header-background: #111111;
+            --column-inner-bg: #222222;
+            --card-surface-bg: #111111;
+            --border-token-color: #ff0055;
+            --accent-glow: rgba(255, 0, 85, 0.4);
+        }
+
+        /* --- GLOBAL HEADER & METRICS DESK --- */
+        .nexus-global-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background-color: var(--header-background);
+            border-bottom: 1px solid var(--border-token-color);
+        }
+
+        .brand-text {
+            font-size: 18pt;
+            font-weight: 900;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .authors-tag {
+            font-size: 9pt;
+            margin: 2px 0 0 0;
+            color: #64748b;
+        }
+
+        .telemetry-dashboard {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+        }
+
+        .metric-container {
+            font-size: 10pt;
+            background: var(--column-inner-bg);
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-token-color);
+        }
+
+        .metric-container .lbl { color: #64748b; margin-right: 5px; }
+        .metric-container .val { font-weight: bold; }
+
+        .system-status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #10b981;
+            transition: background 0.3s ease;
+        }
+
+        /* --- TASK INGESTION DESK --- */
+        .task-staging-control-panel {
+            background: var(--header-background);
+            padding: 15px 30px;
+            border-bottom: 1px solid var(--border-token-color);
+        }
+
+        #nexus-task-generation-form {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        #nexus-task-generation-form input, #nexus-task-generation-form select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-token-color);
+            background: var(--card-surface-bg);
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        #nexus-task-generation-form input[type="text"] { flex: 2; min-width: 200px; }
+
+        .btn-ingest-action {
+            background: #0f172a;
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+        .btn-ingest-action:hover { opacity: 0.9; }
+
+        /* --- MAIN WORKSPACE INTERACTIVE CANVAS --- */
+        .nexus-workspace-board-grid {
+            display: flex;
+            gap: 20px;
+            padding: 25px;
+            height: calc(100vh - 280px);
+            min-height: 400px;
+            overflow-x: auto;
+            box-sizing: border-box;
+        }
+
+        .board-column-wrapper {
+            flex: 1;
+            min-width: 280px;
+            background-color: var(--column-inner-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-token-color);
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+        .column-header-banner {
+            font-size: 10pt;
+            font-weight: bold;
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .line-backlog { background: #e2e8f0; color: #475569; }
+        .line-progress { background: #dbeafe; color: #1e40af; }
+        .line-review { background: #fef3c7; color: #92400e; }
+        .line-completed { background: #d1fae5; color: #065f46; }
+
+        .card-injection-target-viewport {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        /* --- DYNAMIC TASK CARD LAYOUTS --- */
+        .task-card {
+            background-color: var(--card-surface-bg);
+            border: 1px solid var(--border-token-color);
+            border-radius: 6px;
+            padding: 14px;
+            margin-bottom: 12px;
+            cursor: grab;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: transform var(--transition-velocity), box-shadow var(--transition-velocity);
+        }
+        .task-card:hover {
+            box-shadow: 0 4px 12px var(--accent-glow);
+            transform: translateY(-2px);
+        }
+        .task-card:active { cursor: grabbing; }
+        .dragging-active-state { opacity: 0.4; transform: scale(0.96); border: 2px dashed #3b82f6; }
+
+        /* PRIORITY INDICATORS */
+        .custom-priority-high { border-left: 4px solid #ef4444; }
+        .custom-priority-medium { border-left: 4px solid #f59e0b; }
+        .custom-priority-low { border-left: 4px solid #10b981; }
+
+        /* --- AUTOMATION PANEL TRIPLE BUFFER --- */
+        .nexus-automation-system-tray {
+            display: flex;
+            height: 140px;
+            background-color: var(--header-background);
+            border-top: 1px solid var(--border-token-color);
+            padding: 10px 20px;
+            gap: 20px;
+            box-sizing: border-box;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .zia-shell-console-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #0f172a;
+            border-radius: 6px;
+            padding: 8px;
+        }
+
+        .console-output-stream-window {
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 9pt;
+            color: #38bdf8;
+            margin-bottom: 4px;
+        }
+
+        #zia-terminal-input-field {
+            width: 100%;
+            background: #1e293b;
+            border: none;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 9.5pt;
+            padding: 4px 8px;
+            box-sizing: border-box;
+            border-radius: 4px;
+        }
+
+        .realtime-activity-feed-panel {
+            flex: 1;
+            background: var(--card-surface-bg);
+            border: 1px solid var(--border-token-color);
+            border-radius: 6px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header-title {
+            font-size: 8.5pt;
+            font-weight: bold;
+            margin: 0 0 6px 0;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        .feed-log-list-viewport {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 768px) {
+            .nexus-workspace-board-grid { flex-direction: column; height: auto; margin-bottom: 140px; }
+            .nexus-global-header { flex-direction: column; gap: 10px; }
+            .nexus-automation-system-tray { flex-direction: column; height: auto; position: relative; }
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased">
+<body class="theme-focus-view">
 
-    <header class="bg-indigo-900 text-white shadow-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <span class="text-2xl">✈️</span>
-                <div>
-                    <h1 class="text-xl font-bold tracking-tight">AERO-NEXUS CORES</h1>
-                    <p class="text-xs text-indigo-200">Flight Booking Management System // UI Performance Optimized</p>
-                </div>
+    <header class="nexus-global-header">
+        <div class="branding-group">
+            <h1 class="brand-text">NEXUS // BOARD v11.0</h1>
+            <p class="authors-tag">Engineered by: Prajwal Shetty S &amp; Rakshit R</p>
+        </div>
+        
+        <div class="telemetry-dashboard">
+            <div class="metric-container">
+                <span class="lbl">Efficiency Quotient:</span>
+                <span id="metric-efficiency-value" class="val">0%</span>
             </div>
-            <div class="flex items-center space-x-6 text-sm">
-                <div class="bg-indigo-800 px-3 py-1.5 rounded-md border border-indigo-700">
-                    <span class="text-indigo-300">System Gateway:</span> 
-                    <span id="telemetry-status" class="font-mono font-bold text-emerald-400">ACTIVE</span>
-                </div>
+            <div class="metric-container">
+                <span class="lbl">Active Balance:</span>
+                <span id="metric-active-count" class="val">0</span>
             </div>
+            <div class="system-status-indicator" id="compliance-status-dot" title="Ergonomic Break Tracker"></div>
+        </div>
+
+        <div class="theme-profile-selector-zone">
+            <select id="theme-configuration-dropdown" onchange="mutateSystemStyleSkin(this.value)">
+                <option value="theme-focus-view">Focus Clean Grid</option>
+                <option value="theme-dev-view">Terminal Monospaced</option>
+                <option value="theme-cyberpunk">Cyberpunk Neon</option>
+            </select>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <div class="lg:col-span-2 space-y-8">
-            
-            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 class="text-base font-semibold text-slate-900 mb-4 flex items-center">
-                    <span class="mr-2">🔍</span> Query Flight Route Matrices
-                </h3>
-                <form id="route-search-form" class="grid grid-cols-1 sm:grid-cols-3 gap-4" onsubmit="handleFlightSearch(event)">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Origin Node</label>
-                        <select id="search-origin" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                            <option value="BLR">Bengaluru (BLR)</option>
-                            <option value="BOM">Mumbai (BOM)</option>
-                            <option value="DEL">Delhi (DEL)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Destination Target</label>
-                        <select id="search-destination" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                            <option value="DEL">Delhi (DEL)</option>
-                            <option value="BLR">Bengaluru (BLR)</option>
-                            <option value="BOM">Mumbai (BOM)</option>
-                        </select>
-                    </div>
-                    <div class="flex items-end">
-                        <button type="submit" id="btn-search-flights" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2 px-4 rounded-lg shadow-sm transition interactive-element">
-                            Scan Operational Flights
-                        </button>
-                    </div>
-                </form>
-            </section>
+    <section class="task-staging-control-panel">
+        <form id="nexus-task-generation-form" onsubmit="executeTaskIngestionLoop(event)">
+            <input type="text" id="input-task-title" placeholder="Enter card descriptive title..." required />
+            <select id="input-task-priority">
+                <option value="Low">Low Priority</option>
+                <option value="Medium">Medium Priority</option>
+                <option value="High">High Priority</option>
+            </select>
+            <input type="date" id="input-task-deadline" required />
+            <input type="text" id="input-task-tags" placeholder="Tags separated by commas (e.g. core, canvas)" />
+            <button type="submit" class="btn-ingest-action">Mount Card Node</button>
+        </form>
+    </section>
 
-            <section class="space-y-4">
-                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">Available Flight Vector Streams</h3>
-                <div id="flight-results-container" class="grid grid-cols-1 gap-4">
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 text-center text-slate-400 text-sm py-12">
-                        Execute route parameters selection loop to populate query indexes.
-                    </div>
-                </div>
-            </section>
-
-            <section id="seat-map-section" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hidden transition-all duration-300">
-                <div class="flex justify-between items-center mb-6">
-                    <div>
-                        <h3 class="text-base font-semibold text-slate-900">Cabin Layout Seat Allocation Map</h3>
-                        <p class="text-xs text-slate-500" id="active-map-details">Flight: None selected</p>
-                    </div>
-                    <div class="flex space-x-4 text-xs font-medium">
-                        <span class="flex items-center"><span class="w-3 h-3 bg-slate-200 border border-slate-300 rounded mr-1.5"></span>Open</span>
-                        <span class="flex items-center"><span class="w-3 h-3 bg-indigo-600 rounded mr-1.5"></span>Selected</span>
-                        <span class="flex items-center"><span class="w-3 h-3 bg-rose-500 rounded mr-1.5"></span>Occupied</span>
-                    </div>
-                </div>
-
-                <div class="bg-slate-50 p-8 rounded-xl border border-dashed border-slate-300 max-w-md mx-auto">
-                    <div class="text-center text-xs tracking-widest text-slate-400 uppercase font-bold mb-6">▲ Flight Cabin Cockpit Front ▲</div>
-                    
-                    <div id="cabin-seats-grid" class="grid grid-cols-4 gap-3 text-center font-mono text-xs font-bold">
-                        </div>
-                    
-                    <div class="text-center text-xs tracking-widest text-slate-400 uppercase font-bold mt-6">▼ Flight Cabin Aft Exit ▼</div>
-                </div>
-            </section>
+    <main class="nexus-workspace-board-grid">
+        <div class="board-column-wrapper" id="zone-backlog" ondragover="allowDropInterceptor(event)" ondrop="executeDropCommit(event, 'backlog')">
+            <div class="column-header-banner line-backlog">Backlog Buffer</div>
+            <div class="card-injection-target-viewport" id="col-backlog"></div>
         </div>
 
-        <div class="space-y-8">
-            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 sticky top-24">
-                <h3 class="text-base font-semibold text-slate-900 mb-4 flex items-center">
-                    <span class="mr-2">🎟️</span> Passenger Manifest Intake
-                </h3>
-                
-                <form id="booking-manifest-form" onsubmit="handleBookingCommit(event)" class="space-y-4">
-                    <input type="hidden" id="selected-flight-id">
-                    <input type="hidden" id="selected-seat-number">
+        <div class="board-column-wrapper" id="zone-progress" ondragover="allowDropInterceptor(event)" ondrop="executeDropCommit(event, 'progress')">
+            <div class="column-header-banner line-progress">In Progress</div>
+            <div class="card-injection-target-viewport" id="col-progress"></div>
+        </div>
 
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Legal Passenger Full Name</label>
-                        <input type="text" id="passenger-name" placeholder="e.g. Prajwal Shetty" required disabled
-                            class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 transition-all">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contact Email Address</label>
-                        <input type="email" id="passenger-email" placeholder="prajwal@vtu.res.in" required disabled
-                            class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 transition-all">
-                    </div>
+        <div class="board-column-wrapper" id="zone-review" ondragover="allowDropInterceptor(event)" ondrop="executeDropCommit(event, 'review')">
+            <div class="column-header-banner line-review">Quality Review</div>
+            <div class="card-injection-target-viewport" id="col-review"></div>
+        </div>
 
-                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2 text-xs text-slate-600 font-medium">
-                        <div class="flex justify-between">
-                            <span>Selected Seat Coordinates:</span>
-                            <span id="invoice-seat" class="font-mono font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">None Specified</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Base Vector Ticket Fare:</span>
-                            <span id="invoice-base-fare" class="font-mono">₹0.00</span>
-                        </div>
-                        <div class="border-t border-slate-200 pt-2 flex justify-between text-sm text-slate-900 font-bold">
-                            <span>Aggregate Invoice Total:</span>
-                            <span id="invoice-total-fare">₹0.00</span>
-                        </div>
-                    </div>
-
-                    <button type="submit" id="btn-submit-booking" disabled
-                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2.5 px-4 rounded-lg shadow-sm transition-all interactive-element disabled:opacity-50 disabled:cursor-not-allowed">
-                        Commit Booking Transaction
-                    </button>
-                </form>
-            </section>
+        <div class="board-column-wrapper" id="zone-completed" ondragover="allowDropInterceptor(event)" ondrop="executeDropCommit(event, 'completed')">
+            <div class="column-header-banner line-completed">Verified Complete</div>
+            <div class="card-injection-target-viewport" id="col-completed"></div>
         </div>
     </main>
+
+    <footer class="nexus-automation-system-tray">
+        <div class="zia-shell-console-wrapper">
+            <div class="console-output-stream-window" id="zia-console-stream">
+                <p style="margin:2px 0; color:#10b981;">&gt; Zia Automation Core v11.0 online. Pipeline status: READY.</p>
+            </div>
+            <div class="console-input-row-group">
+                <input type="text" id="zia-terminal-input-field" placeholder="Input structural automation directive (status, clear, clean completed)..." onkeydown="if(event.key==='Enter') { executeZiaTerminalCommand(this.value); this.value=''; }" />
+            </div>
+        </div>
+        
+        <div class="realtime-activity-feed-panel">
+            <h3 class="panel-header-title">FIFO Core Event Activity Log</h3>
+            <div class="feed-log-list-viewport" id="nexus-activity-feed-target"></div>
+        </div>
+    </footer>
 
     <script src="nexus_core_logic.js"></script>
 </body>
