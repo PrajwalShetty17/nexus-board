@@ -3,244 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus Board Pro</title>
-    <link rel="stylesheet" href="lol.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="project.js" defer></script>
+    <title>Flight Booking Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        /* Smooth state transitions for interactive elements */
+        .interactive-node {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .interactive-node:active:not(:disabled) {
+            transform: scale(0.97);
+        }
+    </style>
 </head>
-<body class="theme-space">
+<body class="bg-slate-50 text-slate-800 antialiased">
 
-    <div class="background-overlay" id="themeOverlay"></div>
-    <div class="doodle-pattern-overlay" id="doodleOverlay"></div>
-
-    <div id="toastNotificationContainer" class="toast-holder-zone"></div>
-
-    <aside class="sidebar" id="sidebarNode">
-        <div class="user-profile-zone">
-            <div class="profile-avatar">PS</div>
-            <div class="profile-details">
-                <div class="username-wrapper">
-                    <span id="userNameDisplay" class="username-txt">Prajwal Shetty S</span>
-                    <button id="editNameBtn" class="edit-name-trigger" title="Edit Username">✏️</button>
+    <header class="bg-indigo-900 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl">✈️</span>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">AERO-NEXUS CORES</h1>
+                    <p class="text-xs text-indigo-200">Flight Booking Management System // VTU Assessment (BCS403)</p>
                 </div>
-                <p class="user-role-lbl">Workspace Owner</p>
+            </div>
+            <div class="flex items-center space-x-6 text-sm">
+                <div class="bg-indigo-800 px-3 py-1.5 rounded-md border border-indigo-700">
+                    <span class="text-indigo-300">System Gateway:</span> 
+                    <span id="telemetry-status" class="font-mono font-bold text-emerald-400">ACTIVE</span>
+                </div>
             </div>
         </div>
+    </header>
 
-        <div class="logo">
-            <div class="logo-circle"></div>
-            <div>
-                <h2>Nexus Board</h2>
-                <p>Intelligent Workspace</p>
-            </div>
-            <button class="mobile-toggle-close" id="menuCloseBtn">×</button>
-        </div>
+    <main class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        <nav class="sidebar-menu">
-            <button class="menu-item active" data-page="dashboard">📋 Workspace Board</button>
-            <button class="menu-item" data-page="boards">🗂️ Project Clusters</button>
-            <button class="menu-item" data-page="calendar">📅 Schedule & Lineup</button>
-            <button class="menu-item" data-page="analytics">📈 Productivity Analytics</button>
-            <button class="menu-item" data-page="activity">⚡ Historical Logs</button>
-            <button class="menu-item" data-page="themes">🌌 Workspace Themes</button>
+        <div class="lg:col-span-2 space-y-8">
             
-            <div class="backup-action-group-separator">
-                <button class="menu-item export-action-btn" id="exportStateBtn">📥 Backup Workspace</button>
-                <label for="importStateInput" class="menu-item import-action-label">📤 Restore Backup</label>
-                <input type="file" id="importStateInput" class="hidden-file-input" accept=".json">
-            </div>
-        </nav>
-    </aside>
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="text-base font-semibold text-slate-900 mb-4 flex items-center">
+                    <span class="mr-2">🔍</span> Query Flight Route Matrices
+                </h3>
+                <form id="route-search-form" class="grid grid-cols-1 sm:grid-cols-3 gap-4" onsubmit="handleFlightSearch(event)">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Origin Node</label>
+                        <select id="search-origin" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="BLR">Bengaluru (BLR)</option>
+                            <option value="BOM">Mumbai (BOM)</option>
+                            <option value="DEL">Delhi (DEL)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Destination Target</label>
+                        <select id="search-destination" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="DEL">Delhi (DEL)</option>
+                            <option value="BLR">Bengaluru (BLR)</option>
+                            <option value="BOM">Mumbai (BOM)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit" id="btn-search-flights" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2 px-4 rounded-lg shadow-sm transition interactive-node">
+                            Scan Operational Flights
+                        </button>
+                    </div>
+                </form>
+            </section>
 
-    <main class="main-content">
-        
-        <div class="mobile-hud">
-            <button id="menuOpenBtn" class="hud-trigger">☰ Menu</button>
-            <h2 id="mobileHudTitle">Nexus Board: Prajwal Shetty S</h2>
-            <button id="mobileNewTaskBtn" class="hud-action-btn">+</button>
+            <section class="space-y-4">
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">Available Flight Vector Streams</h3>
+                <div id="flight-results-container" class="grid grid-cols-1 gap-4">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 text-center text-slate-400 text-sm py-12">
+                        Execute route parameters selection loop to populate query indexes.
+                    </div>
+                </div>
+            </section>
+
+            <section id="seat-map-section" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hidden transition-all duration-300">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-900">Cabin Layout Seat Allocation Map</h3>
+                        <p class="text-xs text-slate-500" id="active-map-details">Flight: None selected</p>
+                    </div>
+                    <div class="flex space-x-4 text-xs font-medium">
+                        <span class="flex items-center"><span class="w-3 h-3 bg-slate-100 border border-slate-300 rounded mr-1.5"></span>Open</span>
+                        <span class="flex items-center"><span class="w-3 h-3 bg-indigo-600 rounded mr-1.5"></span>Selected</span>
+                        <span class="flex items-center"><span class="w-3 h-3 bg-slate-300 rounded mr-1.5"></span>Occupied</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-8 rounded-xl border border-dashed border-slate-300 max-w-md mx-auto">
+                    <div class="text-center text-xs tracking-widest text-slate-400 uppercase font-bold mb-6">▲ Flight Cabin Cockpit Front ▲</div>
+                    
+                    <div id="cabin-seats-grid" class="grid grid-cols-4 gap-3 text-center font-mono text-xs font-bold">
+                        </div>
+                    
+                    <div class="text-center text-xs tracking-widest text-slate-400 uppercase font-bold mt-6">▼ Flight Cabin Aft Exit ▼</div>
+                </div>
+            </section>
         </div>
 
-        <section class="page active-page" id="dashboard-page">
-            <header class="topbar">
-                <div class="header-titles">
-                    <h1 id="greetingHeader">Welcome back, Prajwal Shetty S</h1>
-                    <p id="liveStatusSubtitle">Manage your projects and everyday actions.</p>
-                </div>
-                <div class="top-actions">
-                    <input type="text" id="searchInput" placeholder="Quick filter tasks...">
-                    <button id="newTaskBtn" class="primary-btn">+ Add New Task</button>
-                </div>
-            </header>
+        <div class="space-y-8">
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 sticky top-24">
+                <h3 class="text-base font-semibold text-slate-900 mb-4 flex items-center">
+                    <span class="mr-2">🎟️</span> Passenger Manifest Intake
+                </h3>
+                
+                <form id="booking-manifest-form" onsubmit="handleBookingCommit(event)" class="space-y-4">
+                    <input type="hidden" id="selected-flight-id">
+                    <input type="hidden" id="selected-seat-number">
 
-            <section class="stopwatch-container-row">
-                <div class="stopwatch-card">
-                    <div class="stopwatch-meta">
-                        <span class="timer-dot"></span>
-                        <h4>FOCUS SPRINT ENGINE</h4>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Legal Passenger Full Name</label>
+                        <input type="text" id="passenger-name" placeholder="Enter full name" required disabled
+                            class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 transition-all">
                     </div>
-                    <div class="stopwatch-display" id="stopwatchDisplay">00:00:00</div>
-                    <div class="stopwatch-controls">
-                        <button class="sw-btn" id="swStartBtn">▶ Start Focus</button>
-                        <button class="sw-btn" id="swPauseBtn">⏸ Pause</button>
-                        <button class="sw-btn reset" id="swResetBtn">🔄 Reset Cycle</button>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contact Email Address</label>
+                        <input type="email" id="passenger-email" placeholder="passenger@email.com" required disabled
+                            class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 transition-all">
                     </div>
-                </div>
-            </section>
 
-            <section class="stats-grid">
-                <div class="stat-card"><h3 id="totalTasks">0</h3><p>Total Tasks</p></div>
-                <div class="stat-card"><h3 id="completedTasks">0</h3><p>Completed Tasks</p></div>
-                <div class="stat-card"><h3 id="pendingTasks">0</h3><p>Pending Tasks</p></div>
-                <div class="stat-card"><h3 id="completionRate">0%</h3><p>Completion Rate</p></div>
-            </section>
-
-            <section class="modes-container-row">
-                <div class="mode-selector-card">
-                    <div class="mode-header">
-                        <h4>WORKSPACE FOCUS PROFILE STATE</h4>
-                        <span class="mode-badge" id="currentModeBadge">FOCUS MODE</span>
-                    </div>
-                    <div class="mode-buttons-strip">
-                        <button class="mode-btn active" data-mode="focus">🎯 Focus Mode</button>
-                        <button class="mode-btn" data-mode="dev">⚡ Tech Sandbox</button>
-                        <button class="mode-btn" data-mode="creative">🎨 Creative Mode</button>
-                        <button class="mode-btn" data-mode="cyberpunk">🤖 Cyber Sandbox</button>
-                        <button class="mode-btn" data-mode="zen">🍃 Zen Minimalist</button>
-                    </div>
-                </div>
-            </section>
-
-            <section class="ai-bot-terminal-row">
-                <div class="terminal-container">
-                    <div class="terminal-header-bar">
-                        <span class="terminal-indicator-dot" id="botStatusDot"></span>
-                        <h4 id="botHeaderTitle">Zia • Cozy AI Workspace Partner</h4>
-                    </div>
-                    <div class="terminal-split-grid">
-                        <div class="terminal-input-panel">
-                            <textarea id="botInputField" placeholder="Say hello to Zia, or add a task! (e.g., 'add Complete UI polish /board:Nexus /priority:High')"></textarea>
-                            <button id="submitBotQueryBtn" class="terminal-run-action">TALK TO ZIA ✦</button>
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2 text-xs text-slate-600 font-medium">
+                        <div class="flex justify-between">
+                            <span>Selected Seat Coordinates:</span>
+                            <span id="invoice-seat" class="font-mono font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">None Specified</span>
                         </div>
-                        <div class="terminal-output-panel">
-                            <div class="output-console-header">ZIA'S THOUGHT STREAM:</div>
-                            <pre id="botConsoleOutput">Hey there, boss! Zia is fully online, loaded into Nexus Board, and ready to dominate this project sprint with you. What are we building today? ✨</pre>
+                        <div class="flex justify-between">
+                            <span>Base Vector Ticket Fare:</span>
+                            <span id="invoice-base-fare" class="font-mono">₹0.00</span>
+                        </div>
+                        <div class="border-t border-slate-200 pt-2 flex justify-between text-sm text-slate-900 font-bold">
+                            <span>Aggregate Invoice Total:</span>
+                            <span id="invoice-total-fare">₹0.00</span>
                         </div>
                     </div>
-                </div>
+
+                    <button type="submit" id="btn-submit-booking" disabled
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2.5 px-4 rounded-lg shadow-sm transition-all interactive-node disabled:opacity-50 disabled:cursor-not-allowed">
+                        Commit Booking Transaction
+                    </button>
+                </form>
             </section>
-
-            <section class="board-section">
-                <div class="board-column" data-status="backlog">
-                    <div class="column-title"><h3>📥 BACKLOG</h3></div>
-                    <div class="task-container" id="backlog"></div>
-                </div>
-                <div class="board-column" data-status="progress">
-                    <div class="column-title"><h3>⚙️ IN PROGRESS</h3></div>
-                    <div class="task-container" id="progress"></div>
-                </div>
-                <div class="board-column" data-status="review">
-                    <div class="column-title"><h3>🔍 UNDER REVIEW</h3></div>
-                    <div class="task-container" id="review"></div>
-                </div>
-                <div class="board-column" data-status="completed">
-                    <div class="column-title"><h3>✅ COMPLETED</h3></div>
-                    <div class="task-container" id="completed"></div>
-                </div>
-            </section>
-
-            <section class="trash-dropzone-row">
-                <div id="trashDropzone" class="trash-vault-card">
-                    <span class="trash-icon-anim">🗑️</span>
-                    <p>DRAG CARDS HERE TO COMPLETELY PURGE THEM FROM THE ENGINE</p>
-                </div>
-            </section>
-        </section>
-
-        <section class="page" id="boards-page">
-            <div class="page-header">
-                <h2>Categorized Project Clusters</h2>
-                <p style="opacity:0.6; margin-bottom:20px;">Isolated project views collected automatically from your tags and metadata entries.</p>
-            </div>
-            <div class="boards-grid" id="boardsGrid"></div>
-        </section>
-
-        <section class="page" id="calendar-page">
-            <div class="page-header">
-                <h2>Schedule & Lineup</h2>
-                <p style="opacity:0.6; margin-bottom:20px;">Chronological lineup of all your tasks sorted by due dates.</p>
-            </div>
-            <div class="calendar-box" id="calendarBox"></div>
-        </section>
-
-        <section class="page" id="analytics-page">
-            <div class="page-header">
-                <h2>Productivity Analytics</h2>
-                <p style="opacity:0.6; margin-bottom:20px;">Visual metrics breakdowns showing workspace velocity and task fulfillment rates.</p>
-            </div>
-            <div class="analytics-wrapper">
-                <canvas id="productivityChart"></canvas>
-            </div>
-        </section>
-
-        <section class="page" id="activity-page">
-            <div class="page-header">
-                <h2>Historical Change Stream</h2>
-                <p style="opacity:0.6; margin-bottom:20px;">A real-time historical stream tracking changes, modifications, and accomplishments.</p>
-            </div>
-            <div class="activity-feed" id="activityFeed"></div>
-        </section>
-
-        <section class="page" id="themes-page">
-            <div class="page-header">
-                <h2>Workspace Personalization</h2>
-                <p style="opacity:0.6; margin-bottom:20px;">Modify your workspace backdrop and environment skins dynamically.</p>
-            </div>
-            <div class="theme-grid">
-                <button class="theme-card" data-theme="theme-space">🌌 Void Space</button>
-                <button class="theme-card" data-theme="theme-jungle">🌿 Deep Jungle</button>
-                <button class="theme-card" data-theme="theme-ocean">🌊 Ocean Depths</button>
-                <button class="theme-card" data-theme="theme-sunset">🌇 Cyber Sunset</button>
-                <button class="theme-card" data-theme="theme-flowers">🌸 Cherry Blossom</button>
-                <button class="theme-card" data-theme="theme-carbon">🌑 Matte Carbon</button>
-                <button class="theme-card" data-theme="theme-aurora">🎆 Polar Aurora</button>
-                <button class="theme-card" data-theme="theme-cyberpunk">🤖 Neon Grid</button>
-                <button class="theme-card" data-theme="theme-nebula">🔮 Orion Nebula</button>
-                <button class="theme-card" data-theme="theme-glacier">🏔️ Arctic Glacier</button>
-                <button class="theme-card" data-theme="theme-desert">🏜️ Crimson Canyon</button>
-                <button class="theme-card" data-theme="theme-forest">🌲 Mystic Woods</button>
-            </div>
-        </section>
+        </div>
     </main>
 
-    <div id="taskModal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Create New Task Entry</h3>
-                <button id="closeModal" class="close-modal-btn">&times;</button>
-            </div>
-            
-            <input type="text" id="taskInput" placeholder="What needs to be done?">
-            <input type="text" id="tagsInput" placeholder="Tags (comma separated, e.g., Engine, Test)">
-            <input type="text" id="boardInput" placeholder="Project Board Name (e.g., VTU, Personal)">
-            <input type="date" id="dateInput">
-            
-            <select id="priorityInput">
-                <option value="High">🔴 High Priority</option>
-                <option value="Medium">🟡 Medium Priority</option>
-                <option value="Low">🟢 Low Priority</option>
-            </select>
-
-            <div class="file-ingestion-zone">
-                <label for="modalFileInput" class="file-stub-label">📎 Attach Document or Asset File</label>
-                <input type="file" id="modalFileInput" class="hidden-file-input">
-                <div id="fileUploadStatus" class="upload-status-lbl">No local files linked.</div>
-            </div>
-
-            <button id="createTaskBtn" class="primary-btn full-width-btn">Save Task Entry</button>
-        </div>
-    </div>
-
-    <script src="project.js"></script>
+    <script src="nexus_core_logic.js"></script>
 </body>
-</html> 
+</html>
