@@ -1,663 +1,588 @@
-/**
- * NEXUS BOARD PRO - CORE APPLICATION SYSTEM ARCHITECTURE
- * Optimizations: Active Memory Cleanup, Event Delegation, Granular Updates, Live Interactive Chatbot
- */
+/* ==========================================================================
+   NEXUS BOARD RUNTIME ARCHITECTURE CORE
+   ========================================================================== */
 
-// Global Application Core State
+// 1. Initial State Infrastructure setup
 let appState = {
     username: "Prajwal Shetty S",
+    currentMode: "general", // Defaults to combined workspace core view
+    currentTheme: "theme-space",
     tasks: [],
     activity: [],
-    currentMode: "focus",
-    currentTheme: "theme-space",
     stopwatch: {
-        running: false,
-        seconds: 0,
-        token: null
+        runtimeSeconds: 0,
+        isActive: false
     }
 };
 
-// Application System Constants
-const STORAGE_KEY = "nexus-board-state-matrix";
-let botDebounceTimer = null;
-let chartInstance = null;
+let stopwatchIntervalInstance = null;
+let historicalProductivityChartInstance = null;
+let globallyTrackedActiveDragTargetNode = null;
 
-// Initialization Hook on DOM Content Ready
+// File Upload Content Buffer
+let structuralBinaryFileContentBuffer = null;
+let structuralBinaryFileNameBuffer = "";
+
+// Initialize Core Registry Pipeline Hook
 document.addEventListener("DOMContentLoaded", () => {
-    loadSavedWorkspaceState();
-    initializeGlobalEventDelegates();
-    startLiveClockEngine();
-    syncUIModeAndTheme();
-    refreshMetricsGrid();
-    renderActivePage("dashboard");
-    
-    // Setup initial analytics rendering if active
-    setTimeout(() => { updateAnalyticsVisualization(); }, 100);
+    initializeWorkspaceStateEngine();
+    registerEventHandlers();
+    syncApplicationThemeEnvironment(appState.currentTheme);
+    renderAll();
+    startStopwatchStateRestorationLoop();
 });
 
-// Load persistent data layers securely
-function loadSavedWorkspaceState() {
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            appState = { ...appState, ...parsed };
-            // Ensure runtime parameters are cleanly reset on initialization
-            appState.stopwatch.running = false;
-            appState.stopwatch.token = null;
+function initializeWorkspaceStateEngine() {
+    const serializedStatePayload = localStorage.getItem("nexus-board-state");
+    if (serializedStatePayload) {
+        try {
+            const parsedState = JSON.parse(serializedStatePayload);
+            // Dynamic structure fallbacks
+            appState = { ...appState, ...parsedState };
+            if (!appState.activity) appState.activity = [];
+            if (!appState.tasks) appState.tasks = [];
+        } catch (e) {
+            console.error("Local storage stream corrupted. Rebuilt default registers.", e);
         }
-    } catch (e) {
-        console.error("Local data ingestion failed, initializing clean buffers.", e);
     }
-    // Perform targeted element generation across views
-    populateKanbanBoard();
-    populateActivityFeed();
-    populateProjectClusters();
-    populateCalendarLineup();
+    document.getElementById("userNameDisplay").innerText = appState.username;
+    document.getElementById("greetingHeader").innerText = `Welcome back, ${appState.username}`;
+    document.getElementById("mobileHudTitle").innerText = `Nexus Board: ${appState.username}`;
 }
 
-// Persist data loops safely without clogging the processing thread
-function persistStateToStorage() {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-    } catch (e) {
-        console.error("Critical error mapping state modifications to storage vectors:", e);
-    }
+function saveApp() {
+    localStorage.setItem("nexus-board-state", JSON.stringify(appState));
 }
 
-/**
- * ARCHITECTURAL FIX 1: GLOBAL EVENT DELEGATION
- * Completely eliminates memory leaks caused by stacking click listeners on card matrices.
- */
-function initializeGlobalEventDelegates() {
-    // Top-level Event Capture for Main Layout Container
-    document.body.addEventListener("click", (e) => {
-        const target = e.target;
-
-        // Navigation Menu Routing
-        const menuItem = target.closest(".menu-item");
-        if (menuItem && !menuItem.classList.contains("export-action-btn") && !target.closest(".import-action-label")) {
-            const desiredPage = menuItem.dataset.page;
-            if (desiredPage) {
-                document.querySelectorAll(".menu-item").forEach(b => b.classList.remove("active"));
-                menuItem.classList.add("active");
-                renderActivePage(desiredPage);
-            }
-            return;
-        }
-
-        // Active Workspace Profile Updates
-        if (target.closest("#editNameBtn")) {
-            const inputName = prompt("Assign custom identity mapping to workspace signature:", appState.username);
-            if (inputName && inputName.trim() !== "") {
-                appState.username = inputName.trim();
-                document.getElementById("userNameDisplay").innerText = appState.username;
-                document.getElementById("mobileHudTitle").innerText = `Nexus Board: ${appState.username}`;
-                document.getElementById("greetingHeader").innerText = `Welcome back, ${appState.username}`;
-                logSystemChange(`Profile modified to "${appState.username}"`);
-                persistStateToStorage();
-            }
-            return;
-        }
-
-        // Focus Profile State Strips
-        const modeBtn = target.closest(".mode-btn");
-        if (modeBtn) {
-            const targetedMode = modeBtn.dataset.mode;
-            document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
-            modeBtn.classList.add("active");
-            appState.currentMode = targetedMode;
-            syncUIModeAndTheme();
-            logSystemChange(`Workspace operation variant mutated to: ${targetedMode.toUpperCase()}`);
-            persistStateToStorage();
-            return;
-        }
-
-        // Theme Variant Ingestions
-        const themeCard = target.closest(".theme-card");
-        if (themeCard) {
-            const nextTheme = themeCard.dataset.theme;
-            appState.currentTheme = nextTheme;
-            syncUIModeAndTheme();
-            spawnToastMessage(`Environment skin successfully initialized to ${nextTheme.replace('theme-', '').toUpperCase()}`, "success");
-            persistStateToStorage();
-            return;
-        }
-
-        // Modal Visibility Controls
-        if (target.closest("#newTaskBtn") || target.closest("#mobileNewTaskBtn")) {
-            document.getElementById("taskModal").classList.remove("hidden");
-            return;
-        }
-        if (target.closest("#closeModal") || target.id === "taskModal") {
-            document.getElementById("taskModal").classList.add("hidden");
-            return;
-        }
-
-        // Inline Action Toggles: Card Demolitions & Target Transformations
-        if (target.classList.contains("delete-card-btn")) {
-            const matchingCardId = target.dataset.id;
-            purgeTargetedTask(matchingCardId);
-            return;
-        }
-
-        // Focus Sprint Controller Operations
-        if (target.id === "swStartBtn") toggleFocusClock(true);
-        if (target.id === "swPauseBtn") toggleFocusClock(false);
-        if (target.id === "swResetBtn") resetFocusClock();
-
-        // Terminal Chat Activation Click Element
-        if (target.id === "submitBotQueryBtn") {
-            executeZiaChatPipeline();
-        }
-    });
-
-    // Modal Task Configuration Saving Hook
-    const saveTaskBtn = document.getElementById("createTaskBtn");
-    if (saveTaskBtn) {
-        saveTaskBtn.onclick = () => {
-            const name = document.getElementById("taskInput").value.trim();
-            const tagsRaw = document.getElementById("tagsInput").value.trim();
-            const boardName = document.getElementById("boardInput").value.trim() || "General Workspace";
-            const inputDate = document.getElementById("dateInput").value;
-            const priority = document.getElementById("priorityInput").value;
-
-            if (!name) {
-                spawnToastMessage("Action description title parameter cannot remain empty.", "danger");
-                return;
-            }
-
-            const constructedTask = {
-                id: "card-vector-" + Date.now() + Math.floor(Math.random() * 1000),
-                title: name,
-                board: boardName,
-                date: inputDate || new Date().toISOString().split('T')[0],
-                priority: priority,
-                status: "backlog",
-                tags: tagsRaw ? tagsRaw.split(",").map(t => t.trim()).filter(t => t.length > 0) : []
-            };
-
-            appState.tasks.push(constructedTask);
-            logSystemChange(`Task card structured: "${name}" initialized inside ${boardName}`);
-            
-            // Re-flush pipeline nodes safely
-            persistStateToStorage();
-            populateKanbanBoard();
-            refreshMetricsGrid();
-            populateProjectClusters();
-            populateCalendarLineup();
-            
-            // Clean up modal states completely
-            document.getElementById("taskInput").value = "";
-            document.getElementById("tagsInput").value = "";
-            document.getElementById("boardInput").value = "";
-            document.getElementById("dateInput").value = "";
-            document.getElementById("taskModal").classList.add("hidden");
-            spawnToastMessage("New assignment appended successfully.", "success");
-        };
-    }
-
-    // Dynamic Filter Task Event Hook Input Handler
-    const searchFilterNode = document.getElementById("searchInput");
-    if (searchFilterNode) {
-        searchFilterNode.addEventListener("input", (e) => {
-            const query = e.target.value.toLowerCase().trim();
-            const cards = document.querySelectorAll(".task-card");
-            cards.forEach(card => {
-                const innerText = card.innerText.toLowerCase();
-                card.style.display = innerText.includes(query) ? "block" : "none";
-            });
-        });
-    }
-
-    // Interactive Terminal Chat Hook Mapping Enter Key to Zia Actions
-    const botInputArea = document.getElementById("botInputField");
-    if (botInputArea) {
-        botInputArea.addEventListener("keydown", (e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                executeZiaChatPipeline();
-            }
-        });
-    }
-
-    // Data Export Configuration Pipeline
-    document.getElementById("exportStateBtn").onclick = () => {
-        const payload = JSON.stringify(appState, null, 2);
-        const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(payload);
-        const auxiliaryDownloadNode = document.createElement("a");
-        auxiliaryDownloadNode.setAttribute("href", dataUri);
-        auxiliaryDownloadNode.setAttribute("download", `nexus_backup_${Date.now()}.json`);
-        document.body.appendChild(auxiliaryDownloadNode);
-        auxiliaryDownloadNode.click();
-        auxiliaryDownloadNode.remove();
-        spawnToastMessage("System database backup export package fired successfully.", "success");
-    };
-
-    // Data Restore/Import Verification Handlers
-    const dataRestoreInputNode = document.getElementById("importStateInput");
-    if (dataRestoreInputNode) {
-        dataRestoreInputNode.addEventListener("change", (e) => {
-            const linkedFile = e.target.files[0];
-            if (!linkedFile) return;
-            const dataStreamReader = new FileReader();
-            dataStreamReader.onload = (event) => {
-                try {
-                    const extractedData = JSON.parse(event.target.result);
-                    if (extractedData.tasks && extractedData.activity) {
-                        appState = { ...appState, ...extractedData };
-                        persistStateToStorage();
-                        location.reload();
-                    } else {
-                        spawnToastMessage("Invalid engine schema metadata parsed inside recovery block.", "danger");
-                    }
-                } catch (err) {
-                    spawnToastMessage("Failed to process local JSON cluster backup payload structural streams.", "danger");
-                }
-            };
-            dataStreamReader.readAsText(linkedFile);
-        });
-    }
-
-    // Initalize HTML5 Drag and Drop Events System Setup 
-    setupDragAndDropSystems();
+function renderAll() {
+    renderKanbanMatrix();
+    calculateVelocityStatistics();
+    renderProjectClustersPage();
+    renderTimelineLineupPage();
+    renderProductivityAnalyticsDashboard();
+    renderHistoricalLogStream();
 }
 
-/**
- * ARCHITECTURAL FIX 2: GRANULAR DOM RE-RENDERING 
- * Renders target modules independently to prevent total DOM wipe cycles.
- */
-function renderActivePage(targetPageId) {
-    document.querySelectorAll(".page").forEach(page => {
-        page.classList.remove("active-page");
-        page.style.setProperty("display", "none", "important");
-    });
-    
-    const chosenViewNode = document.getElementById(`${targetPageId}-page`);
-    if (chosenViewNode) {
-        chosenViewNode.classList.add("active-page");
-        chosenViewNode.style.setProperty("display", "block", "important");
-    }
-
-    // Isolated lazy rendering evaluation blocks
-    if (targetPageId === "analytics") updateAnalyticsVisualization();
-    if (targetPageId === "boards") populateProjectClusters();
-    if (targetPageId === "calendar") populateCalendarLineup();
-    if (targetPageId === "activity") populateActivityFeed();
-}
-
-// Structural Task Creation Dynamic Engine
-function populateKanbanBoard() {
-    const buckets = {
+/* ==========================================================================
+   THE GENERAL SPLIT FILTER PROCESSING ENGINE
+   ========================================================================== */
+function renderKanbanMatrix() {
+    const columns = {
         backlog: document.getElementById("backlog"),
         progress: document.getElementById("progress"),
         review: document.getElementById("review"),
         completed: document.getElementById("completed")
     };
 
-    // Flush active lanes completely before rendering clean nodes
-    Object.values(buckets).forEach(b => { if(b) b.innerHTML = ""; });
+    // Clean structural nodes before mapping
+    Object.values(columns).forEach(columnNode => {
+        if (columnNode) columnNode.innerHTML = "";
+    });
+
+    const standardSearchQueryToken = document.getElementById("searchInput").value.toLowerCase().trim();
 
     appState.tasks.forEach(task => {
-        const structuralLane = buckets[task.status];
-        if (!structuralLane) return;
-
-        const taskCard = document.createElement("div");
-        taskCard.className = `task-card priority-${task.priority.toLowerCase()}`;
-        taskCard.id = task.id;
-        taskCard.draggable = true;
-
-        // Populate card configuration content maps
-        let renderedTagBadges = task.tags.map(t => `<span class="tag">${t}</span>`).join("");
+        // Query Match filter Check
+        const matchesQuery = task.title.toLowerCase().includes(standardSearchQueryToken) || 
+                             (task.board && task.board.toLowerCase().includes(standardSearchQueryToken));
         
-        taskCard.innerHTML = `
-            <button class="delete-card-btn" data-id="${task.id}" title="Purge Card">&times;</button>
-            <div class="task-title">${escapeHTMLMarkup(task.title)}</div>
-            <div class="task-tags">${renderedTagBadges}</div>
-            <div class="task-metadata-footer">
-                <span class="meta-board-tag">📁 ${escapeHTMLMarkup(task.board)}</span>
-                <span class="meta-date-tag">📅 ${task.date}</span>
-            </div>
-        `;
+        if (!matchesQuery) return;
 
-        structuralLane.appendChild(taskCard);
-    });
+        // PROFILE VIEW FILTER SYSTEM
+        let satisfiesModeCondition = false;
+        const normalizedBoardName = (task.board || "").toLowerCase().trim();
 
-    // Rebind active drag state event arrays directly onto the new cards
-    bindTaskDragMetadataListeners();
-}
-
-// Bind native drag lifecycle tracking properties onto elements
-function bindTaskDragMetadataListeners() {
-    const cards = document.querySelectorAll(".task-card");
-    cards.forEach(card => {
-        card.addEventListener("dragstart", () => { card.classList.add("dragging"); });
-        card.addEventListener("dragend", () => { card.classList.remove("dragging"); });
-    });
-}
-
-// Global Board Level Dropzones configurations
-function setupDragAndDropSystems() {
-    const columns = document.querySelectorAll(".board-column");
-    const trashBin = document.getElementById("trashDropzone");
-
-    columns.forEach(col => {
-        col.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            col.classList.add("drag-hovering-active");
-        });
-        col.addEventListener("dragleave", () => { col.classList.remove("drag-hovering-active"); });
-        col.addEventListener("drop", (e) => {
-            e.preventDefault();
-            col.classList.remove("drag-hovering-active");
-            const structuralDraggingNode = document.querySelector(".dragging");
-            if (!structuralDraggingNode) return;
-
-            const targetLaneStatus = col.dataset.status;
-            const targetTaskObj = appState.tasks.find(t => t.id === structuralDraggingNode.id);
-
-            if (targetTaskObj && targetTaskObj.status !== targetLaneStatus) {
-                const primaryOldStatusName = targetTaskObj.status.toUpperCase();
-                targetTaskObj.status = targetLaneStatus;
-                
-                logSystemChange(`Moved "${targetTaskObj.title}" structural link from ${primaryOldStatusName} to ${targetLaneStatus.toUpperCase()}`);
-                persistStateToStorage();
-                
-                // Native structural movement allocation update routing
-                col.querySelector(".task-container").appendChild(structuralDraggingNode);
-                refreshMetricsGrid();
-            }
-        });
-    });
-
-    // Trash Drop Handling configurations
-    if (trashBin) {
-        trashBin.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            trashBin.classList.add("trash-hovering-glow");
-        });
-        trashBin.addEventListener("dragleave", () => { trashBin.classList.remove("trash-hovering-glow"); });
-        trashBin.addEventListener("drop", (e) => {
-            e.preventDefault();
-            trashBin.classList.remove("trash-hovering-glow");
-            const runningDraggedCard = document.querySelector(".dragging");
-            if (runningDraggedCard) {
-                purgeTargetedTask(runningDraggedCard.id);
-            }
-        });
-    }
-}
-
-// Clear individual task targets completely from memory allocations
-function purgeTargetedTask(cardIdStr) {
-    const matchedIndex = appState.tasks.findIndex(t => t.id === cardIdStr);
-    if (matchedIndex !== -1) {
-        const deletedTitleStr = appState.tasks[matchedIndex].title;
-        appState.tasks.splice(matchedIndex, 1);
-        logSystemChange(`Purged item entity card: "${deletedTitleStr}" completely from engine`);
-        persistStateToStorage();
-        
-        // Remove from DOM dynamically without rewriting layout clusters
-        const nodeInDOM = document.getElementById(cardIdStr);
-        if (nodeInDOM) nodeInDOM.remove();
-        
-        refreshMetricsGrid();
-        spawnToastMessage("Assignment removed from live workspace memory matrices.", "danger");
-    }
-}
-
-// High performance metrics calculations 
-function refreshMetricsGrid() {
-    const total = appState.tasks.length;
-    const completed = appState.tasks.filter(t => t.status === "completed").length;
-    const pending = total - completed;
-    const computeRatio = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    document.getElementById("totalTasks").innerText = total;
-    document.getElementById("completedTasks").innerText = completed;
-    document.getElementById("pendingTasks").innerText = pending;
-    document.getElementById("completionRate").innerText = `${computeRatio}%`;
-}
-
-// Generate project cluster breakdowns asynchronously
-function populateProjectClusters() {
-    const container = document.getElementById("boardsGrid");
-    if (!container) return;
-    container.innerHTML = "";
-
-    // Structural Map Reducer for collecting board categories
-    const projectsMap = {};
-    appState.tasks.forEach(t => {
-        if (!projectsMap[t.board]) projectsMap[t.board] = { total: 0, completed: 0 };
-        projectsMap[t.board].total++;
-        if (t.status === "completed") projectsMap[t.board].completed++;
-    });
-
-    if (Object.keys(projectsMap).length === 0) {
-        container.innerHTML = `<div class="empty-state-fallback-lbl">No distinct project clusters mapped yet. Add a task board category map to initialize.</div>`;
-        return;
-    }
-
-    Object.entries(projectsMap).forEach(([name, metrics]) => {
-        const boardCard = document.createElement("div");
-        boardCard.className = "project-cluster-visual-card";
-        boardCard.style.cssText = "background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:20px; border-radius:16px; backdrop-filter:blur(10px);";
-        
-        const progressionPct = Math.round((metrics.completed / metrics.total) * 100);
-        boardCard.innerHTML = `
-            <h4 style="margin-bottom:8px; font-size:15px; color:#f8fafc;">📁 ${escapeHTMLMarkup(name)}</h4>
-            <p style="font-size:12px; opacity:0.5; margin-bottom:12px;">Fulfillment Metrics: ${metrics.completed}/${metrics.total} Tasks Checked</p>
-            <div style="width:100%; height:6px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden;">
-                <div style="width:${progressionPct}%; height:100%; background:linear-gradient(90deg, #3b82f6, #9333ea); border-radius:4px;"></div>
-            </div>
-            <span style="font-size:11px; font-weight:700; opacity:0.8; display:block; text-align:right; margin-top:6px;">${progressionPct}% Done</span>
-        `;
-        container.appendChild(boardCard);
-    });
-}
-
-// Render dynamic due timeline data configurations
-function populateCalendarLineup() {
-    const container = document.getElementById("calendarBox");
-    if (!container) return;
-    container.innerHTML = "";
-
-    // Chronological date sort operations
-    const activeTimelineSortedTasks = [...appState.tasks].sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    if (activeTimelineSortedTasks.length === 0) {
-        container.innerHTML = `<div class="empty-state-fallback-lbl">No upcoming deadline actions mapped to database structures.</div>`;
-        return;
-    }
-
-    activeTimelineSortedTasks.forEach(task => {
-        const eventRow = document.createElement("div");
-        eventRow.style.cssText = "display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); margin-bottom:8px; border-radius:10px;";
-        eventRow.innerHTML = `
-            <div style="display:flex; align-items:center; gap:12px;">
-                <span class="priority-indicator-bullet" style="width:8px; height:8px; border-radius:50%; background:${task.priority === 'High' ? '#ef4444' : task.priority === 'Medium' ? '#f59e0b' : '#10b981'}"></span>
-                <span style="font-size:13px; font-weight:600; text-decoration:${task.status === 'completed' ? 'line-through' : 'none'}; opacity:${task.status === 'completed' ? 0.5 : 1}">${escapeHTMLMarkup(task.title)}</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:15px;">
-                <span style="font-size:11px; opacity:0.4; font-family:monospace;">${task.board.toUpperCase()}</span>
-                <span style="font-size:12px; font-weight:700; color:#c084fc; background:rgba(168,85,247,0.1); padding:4px 8px; border-radius:6px;">🕒 ${task.date}</span>
-            </div>
-        `;
-        container.appendChild(eventRow);
-    });
-}
-
-// Track historical operation array logs inside memory pools
-function populateActivityFeed() {
-    const container = document.getElementById("activityFeed");
-    if (!container) return;
-    container.innerHTML = "";
-
-    if (appState.activity.length === 0) {
-        container.innerHTML = `<div class="empty-state-fallback-lbl">Workspace event recording stream buffer is empty. System actions will display here.</div>`;
-        return;
-    }
-
-    // Process activity stream records mapping historical layers
-    [...appState.activity].reverse().slice(0, 30).forEach(log => {
-        const item = document.createElement("div");
-        item.style.cssText = "padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.03); font-size:12px; display:flex; justify-content:between; align-items:center; gap:10px;";
-        item.innerHTML = `
-            <span style="color:rgba(255,255,255,0.3); font-family:monospace;">[${log.timestamp}]</span>
-            <span style="color:#a7f3d0; flex:1;">${escapeHTMLMarkup(log.message)}</span>
-        `;
-        container.appendChild(item);
-    });
-}
-
-// Append new logs onto historical buffers dynamically
-function logSystemChange(msgString) {
-    const time = new Date().toTimeString().split(' ')[0];
-    appState.activity.push({ timestamp: time, message: msgString });
-    if (appState.activity.length > 100) appState.activity.shift(); // Bound memory footprint
-}
-
-/**
- * ARCHITECTURAL FIX 3: ASYNCHRONOUS HIGH-FIDELITY INTERACTIVE BOT (ZIA LIVE ENGINE)
- * Fixes Zia's logic to process asynchronously without compounding event timeouts or dropping frames.
- */
-function executeZiaChatPipeline() {
-    const inputArea = document.getElementById("botInputField");
-    const outputConsole = document.getElementById("botConsoleOutput");
-    const indicatorDot = document.getElementById("botStatusDot");
-    
-    if (!inputArea || !outputConsole) return;
-    
-    const plainTextRaw = inputArea.value.trim();
-    if (!plainTextRaw) return;
-
-    // Set interactive visual status transitions
-    indicatorDot.style.background = "#f59e0b";
-    indicatorDot.style.boxShadow = "0 0 10px #f59e0b";
-    outputConsole.innerText = "Zia is compiling query vectors and processing operations...";
-
-    if (botDebounceTimer) clearTimeout(botDebounceTimer);
-
-    // Asynchronous Execution Simulation Loop 
-    botDebounceTimer = setTimeout(() => {
-        const queryLower = plainTextRaw.toLowerCase();
-        let systemOutputLog = "";
-
-        // NLP Token Command Router
-        if (queryLower.startsWith("add ") || queryLower.includes("/board:")) {
-            systemOutputLog = handleDirectBotTaskInsertion(plainTextRaw);
-        } else if (queryLower.includes("status") || queryLower.includes("metrics") || queryLower.includes("velocity")) {
-            const total = appState.tasks.length;
-            const finalized = appState.tasks.filter(t => t.status === "completed").length;
-            systemOutputLog = `✦ LIVE WORKSPACE DIAGNOSTIC SUMMARY REPORT:\n` +
-                              `• Global Task Capacity Load: ${total} tracked entries\n` +
-                              `• Current Completed Stack: ${finalized} completed assignments\n` +
-                              `• Efficiency Ratio: ${total > 0 ? Math.round((finalized / total) * 100) : 0}%\n\n` +
-                              `Zia evaluation: Workspace data configurations display optimized operation parameters. Outstanding sprint elements are within standard operational limits. Let's keep moving! 🚀`;
-        } else if (queryLower.includes("clear") || queryLower.includes("purge") || queryLower.includes("wipe")) {
-            appState.tasks = [];
-            appState.activity = [];
-            logSystemChange("Global engine space database wiped via terminal command input execution path");
-            persistStateToStorage();
-            populateKanbanBoard();
-            refreshMetricsGrid();
-            populateProjectClusters();
-            populateCalendarLineup();
-            systemOutputLog = `🌪️ DATABASE RE-INDEX METRICS CLEARED.\nWorkspace has been completely reset. Clean environments established. Everything is down to absolute ground zero structure layers!`;
-        } else if (queryLower.includes("hello") || queryLower.includes("hi") || queryLower.includes("hey")) {
-            systemOutputLog = `Hey there, ${appState.username}! Zia is here, fully responsive, and maintaining full data persistence links.\n\nNeed an automated speed setup? Type: \n"add [Task Name] /board:[Category] /priority:[High/Medium/Low]"\nand watch me construct the workspace layer mapping live on your board!`;
+        if (appState.currentMode === "general") {
+            // "General View" logic displays VTU items, personal items, and completely unlabeled fallbacks side-by-side
+            satisfiesModeCondition = (normalizedBoardName === "vtu" || 
+                                      normalizedBoardName === "personal" || 
+                                      normalizedBoardName === "" || 
+                                      !task.board);
         } else {
-            systemOutputLog = `Zia processing pipeline feedback: Command input unrecognized.\n\nParsed instructions: "${plainTextRaw}"\n\nSupported terminal syntaxes:\n• "add [Action Context] /board:[Project Name] /priority:[High]" to inject kanban objects\n• "status" to calculate live system velocity indices\n• "purge" to execute complete data clears across memory channels`;
+            // Fallback: Default modes execute a strict token lookup matrix matching board tags
+            satisfiesModeCondition = (appState.currentMode === normalizedBoardName);
         }
 
-        // Return status nodes to standardized states
-        indicatorDot.style.background = "#22c55e";
-        indicatorDot.style.boxShadow = "0 0 10px #22c55e";
-        outputConsole.innerText = systemOutputLog;
-        inputArea.value = "";
-    }, 450); // Fluid pacing delay matching terminal simulation layouts
-}
-
-// Automated parser mapping string strings to operational Kanban card matrices
-function handleDirectBotTaskInsertion(inputCommandStr) {
-    try {
-        let taskTitle = inputCommandStr.substring(4).split("/")[0].trim();
-        let boardExtraction = "General Workspace";
-        let priorityExtraction = "Medium";
-
-        if (inputCommandStr.includes("/board:")) {
-            const boardSection = inputCommandStr.split("/board:")[1].split("/")[0].trim();
-            if (boardSection) boardExtraction = boardSection;
-        }
-        if (inputCommandStr.includes("/priority:")) {
-            const prioritySection = inputCommandStr.split("/priority:")[1].split("/")[0].trim();
-            if (prioritySection) {
-                const normalizedPriority = prioritySection.charAt(0).toUpperCase() + prioritySection.slice(1).toLowerCase();
-                if (["High", "Medium", "Low"].includes(normalizedPriority)) priorityExtraction = normalizedPriority;
+        if (satisfiesModeCondition) {
+            const cardDOMElement = buildTaskCardDOMElement(task);
+            if (columns[task.status]) {
+                columns[task.status].appendChild(cardDOMElement);
             }
         }
+    });
 
-        if (!taskTitle) return "⚠️ Automated processing script failure: Command lacks clear contextual card identity tracking metadata parameter strings.";
+    // Rebind Drag events onto newly injected nodes
+    attachDragAndDropNodeListeners();
+}
 
-        const botGeneratedObject = {
-            id: "card-vector-" + Date.now() + Math.floor(Math.random() * 10),
-            title: taskTitle,
-            board: boardExtraction,
-            date: new Date().toISOString().split('T')[0],
-            priority: priorityExtraction,
-            status: "backlog",
-            tags: ["AI-Injected", "Zia Automata"]
-        };
+function buildTaskCardDOMElement(task) {
+    const card = document.createElement("div");
+    card.classList.add("task-card");
+    card.setAttribute("draggable", "true");
+    card.setAttribute("data-id", task.id);
 
-        appState.tasks.push(botGeneratedObject);
-        logSystemChange(`Automated parsing event card inserted: "${taskTitle}" within cluster: ${boardExtraction}`);
-        persistStateToStorage();
-        
-        // Dynamic incremental runtime updates to prevent main thread blocking
-        populateKanbanBoard();
-        refreshMetricsGrid();
-        
-        return `✦ AUTOMATED TASK GENERATION ENGINE EXECUTION COMPLETE:\n` +
-               `• Card Title: "${taskTitle}"\n` +
-               `• Allocated Board Mapping: ${boardExtraction}\n` +
-               `• Priority Level Assigned: ${priorityExtraction}\n\n` +
-               `Successfully compiled parameters and deployed structural frame elements to the Backlog lane array matrix dynamically! ✨`;
-    } catch(err) {
-        return "⚠️ Critical processing pipeline fault encountered while trying to slice parameters from terminal injection string models.";
+    let priorityBadgeColor = "#22c55e"; // Low priority green
+    if (task.priority === "High") priorityBadgeColor = "#ef4444";
+    if (task.priority === "Medium") priorityBadgeColor = "#eab308";
+
+    let fileAttachmentBadgeSnippet = "";
+    if (task.attachedFileName) {
+        fileAttachmentBadgeSnippet = `
+            <div class="task-file-link-badge" onclick="triggerFileDownloadStream('${task.id}')" title="Download Asset: ${task.attachedFileName}">
+                📎 ${task.attachedFileName}
+            </div>`;
+    }
+
+    card.innerHTML = `
+        <div class="task-priority-ribbon" style="background: ${priorityBadgeColor}"></div>
+        <div class="task-title">${escapeHTMLMarkupCharacters(task.title)}</div>
+        <div class="task-metadata-row">
+            ${task.board ? `<span class="task-board-lbl-tag">${escapeHTMLMarkupCharacters(task.board.toUpperCase())}</span>` : ""}
+            ${task.date ? `<span class="task-date-lbl-tag">📅 ${task.date}</span>` : ""}
+        </div>
+        ${fileAttachmentBadgeSnippet}
+    `;
+    return card;
+}
+
+/* ==========================================================================
+   DRAG AND DROP SUB-SYSTEM OVERLAYS
+   ========================================================================== */
+function attachDragAndDropNodeListeners() {
+    const cards = document.querySelectorAll(".task-card");
+    const containers = document.querySelectorAll(".task-container");
+    const trashZone = document.getElementById("trashDropzone");
+
+    cards.forEach(card => {
+        card.addEventListener("dragstart", () => {
+            globallyTrackedActiveDragTargetNode = card;
+            card.classList.add("dragging");
+        });
+        card.addEventListener("dragend", () => {
+            card.classList.remove("dragging");
+            globallyTrackedActiveDragTargetNode = null;
+            document.querySelectorAll(".board-column").forEach(c => c.classList.remove("drag-hovering-active"));
+            if (trashZone) trashZone.classList.remove("trash-hovering-glow");
+        });
+    });
+
+    containers.forEach(container => {
+        const parentColumn = container.closest(".board-column");
+        container.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            if (parentColumn) parentColumn.classList.add("drag-hovering-active");
+        });
+        container.addEventListener("dragleave", () => {
+            if (parentColumn) parentColumn.classList.remove("drag-hovering-active");
+        });
+        container.addEventListener("drop", () => {
+            if (!globallyTrackedActiveDragTargetNode) return;
+            const targetTaskId = globallyTrackedActiveDragTargetNode.getAttribute("data-id");
+            const destinationStatus = container.id;
+
+            const targetedTaskIndex = appState.tasks.findIndex(t => t.id === targetTaskId);
+            if (targetedTaskIndex !== -1 && appState.tasks[targetedTaskIndex].status !== destinationStatus) {
+                const legacyStatus = appState.tasks[targetedTaskIndex].status;
+                appState.tasks[targetedTaskIndex].status = destinationStatus;
+                
+                logHistoricalChangeStreamEvent(`Moved task card "${appState.tasks[targetedTaskIndex].title}" from column [${legacyStatus.toUpperCase()}] over to [${destinationStatus.toUpperCase()}].`);
+                saveApp();
+                renderAll();
+            }
+        });
+    });
+
+    if (trashZone) {
+        trashZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            trashZone.classList.add("trash-hovering-glow");
+        });
+        trashZone.addEventListener("dragleave", () => {
+            trashZone.classList.remove("trash-hovering-glow");
+        });
+        trashZone.addEventListener("drop", () => {
+            if (!globallyTrackedActiveDragTargetNode) return;
+            const targetTaskId = globallyTrackedActiveDragTargetNode.getAttribute("data-id");
+            const taskMatch = appState.tasks.find(t => t.id === targetTaskId);
+            
+            if (taskMatch) {
+                appState.tasks = appState.tasks.filter(t => t.id !== targetTaskId);
+                logHistoricalChangeStreamEvent(`Purged task card entry "${taskMatch.title}" permanently via vault layout drop actions.`);
+                spawnToastNotificationBanner("Document wiped from registry.", "danger");
+                saveApp();
+                renderAll();
+            }
+        });
     }
 }
 
-// Integrated Chart.js data rendering wrapper tracking visualization configurations
-function updateAnalyticsVisualization() {
-    const renderingContextCanvas = document.getElementById("productivityChart");
-    if (!renderingContextCanvas) return;
+/* ==========================================================================
+   EVENT SUITE HANDLER ROUTINES
+   ========================================================================== */
+function registerEventHandlers() {
+    // Top Bar Search Actions
+    document.getElementById("searchInput").addEventListener("input", renderKanbanMatrix);
 
-    const dataMatrix = { backlog: 0, progress: 0, review: 0, completed: 0 };
-    appState.tasks.forEach(t => { if (dataMatrix[t.status] !== undefined) dataMatrix[t.status]++; });
+    // Modal Control Management Switches
+    const taskModal = document.getElementById("taskModal");
+    document.getElementById("newTaskBtn").addEventListener("click", () => taskModal.classList.remove("hidden"));
+    document.getElementById("mobileNewTaskBtn").addEventListener("click", () => taskModal.classList.remove("hidden"));
+    document.getElementById("closeModal").addEventListener("click", () => taskModal.classList.add("hidden"));
 
-    if (chartInstance) {
-        chartInstance.destroy();
+    // Handle File upload mapping inside creation frame buffers
+    const localFileInputField = document.getElementById("modalFileInput");
+    const localFileUploadLabelText = document.getElementById("fileUploadStatus");
+    if (localFileInputField) {
+        localFileInputField.addEventListener("change", (e) => {
+            const activeTargetFile = e.target.files[0];
+            if (activeTargetFile) {
+                structuralBinaryFileNameBuffer = activeTargetFile.name;
+                const dynamicFileStreamReader = new FileReader();
+                dynamicFileStreamReader.onload = function(evt) {
+                    structuralBinaryFileContentBuffer = evt.target.result;
+                    localFileUploadLabelText.innerText = `Linked: ${activeTargetFile.name} (${Math.round(activeTargetFile.size/1024)} KB)`;
+                };
+                dynamicFileStreamReader.readAsDataURL(activeTargetFile);
+            }
+        });
     }
 
-    // Initialize High Fidelity Visual Canvas Config Mapping
-    chartInstance = new Chart(renderingContextCanvas, {
-        type: 'bar',
+    // Task Submission Engine Pipeline Execution
+    document.getElementById("createTaskBtn").addEventListener("click", appendNewTaskEntryFromModalStructure);
+
+    // Profile Context Selection Configuration Strip Switches
+    document.querySelectorAll(".mode-btn").forEach(button => {
+        button.addEventListener("click", (e) => {
+            document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+            button.classList.add("active");
+            
+            const selectedMode = button.getAttribute("data-mode");
+            appState.currentMode = selectedMode;
+            
+            const currentBadgeNode = document.getElementById("currentModeBadge");
+            if (currentBadgeNode) currentBadgeNode.innerText = `${selectedMode.toUpperCase()} ACTIVE`;
+            
+            // Apply unique global engine style sheets overrides
+            document.body.className = ""; // Wipe active overrides 
+            document.body.classList.add(`theme-${appState.currentTheme || "space"}`);
+            
+            if (selectedMode === "zen") document.body.classList.add("mode-zen-view");
+            if (selectedMode === "dev") document.body.classList.add("mode-dev-view");
+            if (selectedMode === "creative") document.body.classList.add("mode-creative-view");
+            if (selectedMode === "cyberpunk") document.body.classList.add("mode-cyberpunk-view");
+
+            saveApp();
+            renderAll();
+            spawnToastNotificationBanner(`Switched target filter engine pipeline mode context to: ${selectedMode.toUpperCase()}`, "success");
+        });
+    });
+
+    // Username Change Mechanics Trigger
+    document.getElementById("editNameBtn").addEventListener("click", () => {
+        const structuralNamePromptInputResult = prompt("Modify registered engineering operator name identification:", appState.username);
+        if (structuralNamePromptInputResult && structuralNamePromptInputResult.trim()) {
+            appState.username = structuralNamePromptInputResult.trim();
+            document.getElementById("userNameDisplay").innerText = appState.username;
+            document.getElementById("greetingHeader").innerText = `Welcome back, ${appState.username}`;
+            document.getElementById("mobileHudTitle").innerText = `Nexus Board: ${appState.username}`;
+            logHistoricalChangeStreamEvent(`Modified workspace owner identifier to [${appState.username}].`);
+            saveApp();
+        }
+    });
+
+    // Sidebar Page Tab Routing Matrices
+    document.querySelectorAll(".sidebar-menu .menu-item[data-page]").forEach(tabBtn => {
+        tabBtn.addEventListener("click", () => {
+            document.querySelectorAll(".sidebar-menu .menu-item[data-page]").forEach(b => b.classList.remove("active"));
+            tabBtn.classList.add("active");
+            
+            const targetedPageId = tabBtn.getAttribute("data-page");
+            document.querySelectorAll(".main-content .page").forEach(pageNode => pageNode.classList.remove("active-page"));
+            
+            const displayTargetPage = document.getElementById(`${targetedPageId}-page`);
+            if (displayTargetPage) displayTargetPage.classList.add("active-page");
+        });
+    });
+
+    // Theme Switch Selection Node Listeners
+    document.querySelectorAll(".theme-card").forEach(themeCardNode => {
+        themeCardNode.addEventListener("click", () => {
+            const targetedThemeKeyword = themeCardNode.getAttribute("data-theme");
+            appState.currentTheme = targetedThemeKeyword;
+            syncApplicationThemeEnvironment(targetedThemeKeyword);
+            saveApp();
+            spawnToastNotificationBanner(`Environment layout blueprint modified to alternative engine skin context.`, "success");
+        });
+    });
+
+    // Mobile Responsive Overlay toggles
+    const sidebarElementNode = document.getElementById("sidebarNode");
+    document.getElementById("menuOpenBtn").addEventListener("click", () => sidebarElementNode.style.transform = "translateX(0)");
+    document.getElementById("menuCloseBtn").addEventListener("click", () => sidebarElementNode.style.transform = "translateX(-100%)");
+
+    // Backup Export Data Stream Handling
+    document.getElementById("exportStateBtn").addEventListener("click", () => {
+        const rawJsonStringDataStream = JSON.stringify(appState, null, 4);
+        const dynamicBinaryBlobDataHolder = new Blob([rawJsonStringDataStream], { type: "application/json" });
+        const virtualAnchorDownloadLinkElement = document.createElement("a");
+        virtualAnchorDownloadLinkElement.href = URL.createObjectURL(dynamicBinaryBlobDataHolder);
+        virtualAnchorDownloadLinkElement.download = `NEXUS-BOARD-BACKUP-${new Date().toISOString().slice(0,10)}.json`;
+        virtualAnchorDownloadLinkElement.click();
+        spawnToastNotificationBanner("Configuration blueprint backup exported cleanly.", "success");
+    });
+
+    // Backup Import Data Stream Parsing
+    document.getElementById("importStateInput").addEventListener("change", (e) => {
+        const targetUploadMetadataDescriptor = e.target.files[0];
+        if (!targetUploadMetadataDescriptor) return;
+        
+        const runtimeBlobStreamReader = new FileReader();
+        runtimeBlobStreamReader.onload = function(evt) {
+            try {
+                const structuredImportedDataStateObject = JSON.parse(evt.target.result);
+                if (structuredImportedDataStateObject.tasks && structuredImportedDataStateObject.username) {
+                    appState = structuredImportedDataStateObject;
+                    saveApp();
+                    window.location.reload();
+                } else {
+                    spawnToastNotificationBanner("Invalid system profile backup structural blueprint.", "danger");
+                }
+            } catch (err) {
+                spawnToastNotificationBanner("File payload parsing corruption error.", "danger");
+            }
+        };
+        runtimeBlobStreamReader.readAsText(targetUploadMetadataDescriptor);
+    });
+
+    // Stopwatch Controls Hookups
+    document.getElementById("swStartBtn").addEventListener("click", startFocusTimerSprintEngine);
+    document.getElementById("swPauseBtn").addEventListener("click", pauseFocusTimerSprintEngine);
+    document.getElementById("swResetBtn").addEventListener("click", resetFocusTimerSprintEngine);
+
+    // Zia Chat Trigger Entry Execution Nodes
+    document.getElementById("submitBotQueryBtn").addEventListener("click", executeZiaCommandPipelineProcessor);
+    document.getElementById("botInputField").addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            executeZiaCommandPipelineProcessor();
+        }
+    });
+}
+
+function syncApplicationThemeEnvironment(themeClassName) {
+    // Preserve custom view classes while modifying base background matrices
+    const workingClassList = Array.from(document.body.classList).filter(c => c.startsWith("mode-"));
+    document.body.className = "";
+    document.body.classList.add(themeClassName);
+    workingClassList.forEach(c => document.body.classList.add(c));
+}
+
+/* ==========================================================================
+   TASK HANDLING & CREATION METHODS
+   ========================================================================== */
+function appendNewTaskEntryFromModalStructure() {
+    const titleVal = document.getElementById("taskInput").value.trim();
+    const tagsVal = document.getElementById("tagsInput").value.trim();
+    const boardVal = document.getElementById("boardInput").value.trim() || "general";
+    const dateVal = document.getElementById("dateInput").value;
+    const priorityVal = document.getElementById("priorityInput").value;
+
+    if (!titleVal) {
+        spawnToastNotificationBanner("Task identifier title string cannot remain blank.", "danger");
+        return;
+    }
+
+    const uniqueGeneratedTaskStringId = "task-" + Date.now() + "-" + Math.floor(Math.random()*1000);
+    const splitProcessedTagsArray = tagsVal ? tagsVal.split(",").map(t => t.trim()).filter(t => t.length > 0) : ["General Workspace"];
+
+    const builtTaskObjectSchema = {
+        id: uniqueGeneratedTaskStringId,
+        title: titleVal,
+        tags: splitProcessedTagsArray,
+        board: boardVal,
+        date: dateVal || null,
+        priority: priorityVal,
+        status: "backlog",
+        attachedFileName: structuralBinaryFileNameBuffer || null,
+        attachedFileDataStream: structuralBinaryFileContentBuffer || null
+    };
+
+    appState.tasks.push(builtTaskObjectSchema);
+    logHistoricalChangeStreamEvent(`Created new task entry card [${titleVal.toUpperCase()}] targeted toward cluster sector [${boardVal.toUpperCase()}].`);
+    
+    saveApp();
+    renderAll();
+
+    // Re-initialize ingestion form fields
+    document.getElementById("taskInput").value = "";
+    document.getElementById("tagsInput").value = "";
+    document.getElementById("boardInput").value = "";
+    document.getElementById("dateInput").value = "";
+    document.getElementById("modalFileInput").value = "";
+    document.getElementById("fileUploadStatus").innerText = "No local files linked.";
+    
+    structuralBinaryFileContentBuffer = null;
+    structuralBinaryFileNameBuffer = "";
+
+    document.getElementById("taskModal").classList.add("hidden");
+    spawnToastNotificationBanner("Saved directly to workspace database matrix!", "success");
+}
+
+function triggerFileDownloadStream(taskId) {
+    const taskMatch = appState.tasks.find(t => t.id === taskId);
+    if (taskMatch && taskMatch.attachedFileDataStream) {
+        const simulatedAnchorDownloadElement = document.createElement("a");
+        simulatedAnchorDownloadElement.href = taskMatch.attachedFileDataStream;
+        simulatedAnchorDownloadElement.download = taskMatch.attachedFileName;
+        simulatedAnchorDownloadElement.click();
+        spawnToastNotificationBanner("Downloading attached document asset asset data flow stream.", "success");
+    } else {
+        spawnToastNotificationBanner("File reference missing or corrupted.", "danger");
+    }
+}
+
+/* ==========================================================================
+   STATISTICAL ENGINE COMPUTATION ROUTINES
+   ========================================================================== */
+function calculateVelocityStatistics() {
+    const totals = appState.tasks.length;
+    const visibilityQueryToken = document.getElementById("searchInput").value.toLowerCase().trim();
+
+    // Profile Scope Specific Filter Logic matching Kanban loops
+    const scopeFilteredTasksList = appState.tasks.filter(task => {
+        const matchesSearch = task.title.toLowerCase().includes(visibilityQueryToken) || 
+                              (task.board && task.board.toLowerCase().includes(visibilityQueryToken));
+        if (!matchesSearch) return false;
+
+        const normalizedBoardName = (task.board || "").toLowerCase().trim();
+        if (appState.currentMode === "general") {
+            return (normalizedBoardName === "vtu" || normalizedBoardName === "personal" || normalizedBoardName === "" || !task.board);
+        }
+        return (appState.currentMode === normalizedBoardName);
+    });
+
+    const contextTotals = scopeFilteredTasksList.length;
+    const completedCount = scopeFilteredTasksList.filter(t => t.status === "completed").length;
+    const pendingCount = contextTotals - completedCount;
+    const dynamicRatePercentage = contextTotals > 0 ? Math.round((completedCount / contextTotals) * 100) : 0;
+
+    document.getElementById("totalTasks").innerText = contextTotals;
+    document.getElementById("completedTasks").innerText = completedCount;
+    document.getElementById("pendingTasks").innerText = pendingCount;
+    document.getElementById("completionRate").innerText = `${dynamicRatePercentage}%`;
+}
+
+/* ==========================================================================
+   SUB-PAGE RENDERING INTERFACES (CLUSTERS, LINEUPS, CHARTS)
+   ========================================================================== */
+function renderProjectClustersPage() {
+    const clustersGridNode = document.getElementById("boardsGrid");
+    if (!clustersGridNode) return;
+    clustersGridNode.innerHTML = "";
+
+    // Extract dynamic map layout properties from active boards references
+    const dynamicClusterMap = {};
+    appState.tasks.forEach(task => {
+        const rawBoardIdentifier = task.board || "Unassigned General Workspace";
+        if (!dynamicClusterMap[rawBoardIdentifier]) dynamicClusterMap[rawBoardIdentifier] = [];
+        dynamicClusterMap[rawBoardIdentifier].push(task);
+    });
+
+    if (Object.keys(dynamicClusterMap).length === 0) {
+        clustersGridNode.innerHTML = `<div class="empty-state-card-lbl">No dynamic project clusters populated inside structural logs yet. Create cards to automatically compile views.</div>`;
+        return;
+    }
+
+    Object.entries(dynamicClusterMap).forEach(([clusterName, tasksInCluster]) => {
+        const totalClusterCardsCount = tasksInCluster.length;
+        const completeClusterCardsCount = tasksInCluster.filter(t => t.status === "completed").length;
+        const structuralRatePercentage = Math.round((completeClusterCardsCount / totalClusterCardsCount) * 100);
+
+        const clusterCardNode = document.createElement("div");
+        clusterCardNode.classList.add("board-summary-card");
+        clusterCardNode.innerHTML = `
+            <h3 class="cluster-card-title-lbl">${escapeHTMLMarkupCharacters(clusterName.toUpperCase())}</h3>
+            <p class="cluster-card-stats-lbl">Total Tasks Logged: <strong>${totalClusterCardsCount}</strong> (${completeClusterCardsCount} completed)</p>
+            <div class="cluster-progress-track-bar-container">
+                <div class="cluster-progress-fill-indicator" style="width: ${structuralRatePercentage}%"></div>
+            </div>
+            <div style="font-size:11px; text-align:right; margin-top:4px; opacity:0.5; font-weight:700;">${structuralRatePercentage}% Complete</div>
+        `;
+        clustersGridNode.appendChild(clusterCardNode);
+    });
+}
+
+function renderTimelineLineupPage() {
+    const calendarBoxNode = document.getElementById("calendarBox");
+    if (!calendarBoxNode) return;
+    calendarBoxNode.innerHTML = "";
+
+    // Extract dated structural variables, sorting chronologically 
+    const timelineSortedTasks = appState.tasks.filter(t => t.date !== null && t.date !== "").sort((first, second) => new Date(first.date) - new Date(second.date));
+
+    if (timelineSortedTasks.length === 0) {
+        calendarBoxNode.innerHTML = `<div class="empty-state-card-lbl">No scheduled due date references identified inside storage registries. Linked tasks appear here.</div>`;
+        return;
+    }
+
+    timelineSortedTasks.forEach(task => {
+        const timelineItemRowNode = document.createElement("div");
+        timelineItemRowNode.classList.add("calendar-line-item");
+        timelineItemRowNode.innerHTML = `
+            <div class="lineup-date-badge">📅 ${task.date}</div>
+            <div class="lineup-task-details">
+                <span class="lineup-task-title-txt">${escapeHTMLMarkupCharacters(task.title)}</span>
+                <span class="lineup-board-badge">${escapeHTMLMarkupCharacters((task.board || "GENERAL").toUpperCase())}</span>
+            </div>
+            <div class="lineup-status-badge status-${task.status}">${task.status.toUpperCase()}</div>
+        `;
+        calendarBoxNode.appendChild(timelineItemRowNode);
+    });
+}
+
+function renderProductivityAnalyticsDashboard() {
+    const canvasNodeElement = document.getElementById("productivityChart");
+    if (!canvasNodeElement) return;
+
+    const columnStatusIdentifiers = ["backlog", "progress", "review", "completed"];
+    const quantitativeDatasetValues = columnStatusIdentifiers.map(statusKey => appState.tasks.filter(t => t.status === statusKey).length);
+
+    if (historicalProductivityChartInstance) {
+        historicalProductivityChartInstance.destroy();
+    }
+
+    const totalActiveVolume = appState.tasks.length;
+    if (totalActiveVolume === 0) {
+        const chartWrapperParent = canvasNodeElement.parentNode;
+        if(chartWrapperParent && !document.getElementById("emptyChartNotice")) {
+            const warningStub = document.createElement("p");
+            warningStub.id = "emptyChartNotice";
+            warningStub.innerText = "Insufficient database profile assets to render chart visuals.";
+            warningStub.style.cssText = "font-size: 13px; text-align: center; opacity: 0.5; padding: 40px 0;";
+            chartWrapperParent.appendChild(warningStub);
+        }
+        return;
+    } else {
+        const oldNotice = document.getElementById("emptyChartNotice");
+        if (oldNotice) oldNotice.remove();
+    }
+
+    const canvasRenderingContext = canvasNodeElement.getContext("2d");
+    historicalProductivityChartInstance = new Chart(canvasRenderingContext, {
+        type: "bar",
         data: {
-            labels: ['BACKLOG STACK', 'IN PROGRESS LINEUP', 'UNDER SEVERE REVIEW', 'COMPLETED MILESTONES'],
+            labels: ["BACKLOG INGESTION", "ACTIVE IN-PROGRESS", "UNDER REGULATORY REVIEW", "COMPLETED VELOCITY"],
             datasets: [{
-                label: 'Global Distribution Matrices',
-                data: [dataMatrix.backlog, dataMatrix.progress, dataMatrix.review, dataMatrix.completed],
+                label: "Registered Tasks Volume Volume",
+                data: quantitativeDatasetValues,
                 backgroundColor: [
-                    'rgba(239, 68, 68, 0.25)',
-                    'rgba(59, 130, 246, 0.25)',
-                    'rgba(245, 158, 11, 0.25)',
-                    'rgba(16, 185, 129, 0.25)'
+                    "rgba(96, 165, 250, 0.25)",  // Blue
+                    "rgba(234, 179, 8, 0.25)",   // Yellow
+                    "rgba(168, 85, 247, 0.25)",  // Purple
+                    "rgba(16, 185, 129, 0.25)"   // Green
                 ],
                 borderColor: [
-                    '#ef4444',
-                    '#3b82f6',
-                    '#f59e0b',
-                    '#10b981'
+                    "#60a5fa", "#eab308", "#a855f7", "#10b981"
                 ],
                 borderWidth: 2,
                 borderRadius: 8
@@ -667,81 +592,252 @@ function updateAnalyticsVisualization() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { labels: { color: '#f8fafc', font: { family: 'Inter', weight: 600 } } }
+                legend: { display: false }
             },
             scales: {
-                x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.6)' } },
-                y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.6)', stepSize: 1 } }
+                y: {
+                    beginAtZero: true,
+                    grid: { color: "rgba(255, 255, 255, 0.05)" },
+                    ticks: { color: "rgba(255, 255, 255, 0.6)", stepSize: 1 }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: "rgba(255, 255, 255, 0.6)", font: { size: 10, weight: "600" } }
+                }
             }
         }
     });
 }
 
-// Core Runtime Focus System Configuration Modules
-function toggleFocusClock(shouldRunBool) {
-    if (shouldRunBool && !appState.stopwatch.running) {
-        appState.stopwatch.running = true;
-        logSystemChange("Focus engine environment profile tracking session initiated successfully.");
-        appState.stopwatch.token = setInterval(() => {
-            appState.stopwatch.seconds++;
-            document.getElementById("stopwatchDisplay").innerText = formatStopwatchTimestamp(appState.stopwatch.seconds);
+function renderHistoricalLogStream() {
+    const historyFeedNode = document.getElementById("activityFeed");
+    if (!historyFeedNode) return;
+    historyFeedNode.innerHTML = "";
+
+    if (appState.activity.length === 0) {
+        historyFeedNode.innerHTML = `<div class="empty-state-card-lbl">No historical entries written down to systemic log files yet.</div>`;
+        return;
+    }
+
+    // Render chronological records in reverse order
+    [...appState.activity].reverse().forEach(logItem => {
+        const itemNode = document.createElement("div");
+        itemNode.classList.add("activity-log-line");
+        itemNode.innerHTML = `
+            <span class="log-timestamp-lbl">[${logItem.timestamp}]</span>
+            <span class="log-message-body-txt">${escapeHTMLMarkupCharacters(logItem.message)}</span>
+        `;
+        historyFeedNode.appendChild(itemNode);
+    });
+}
+
+function logHistoricalChangeStreamEvent(messageString) {
+    const formatTimestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    appState.activity.push({
+        timestamp: formatTimestamp,
+        message: messageString
+    });
+    // Truncate stack log registers dynamically to prevent excessive allocation scales
+    if (appState.activity.length > 100) appState.activity.shift();
+}
+
+/* ==========================================================================
+   FOCUS SPRINT TIMER MOTOR REGISTRY ENGINE
+   ========================================================================== */
+function startStopwatchStateRestorationLoop() {
+    updateStopwatchVisualDisplayFrame();
+    if (appState.stopwatch.isActive) {
+        const historicalCheckpointTime = localStorage.getItem("nexus-stopwatch-exit-timestamp");
+        if (historicalCheckpointTime) {
+            const timeDifferenceDeltaSeconds = Math.floor((Date.now() - parseInt(historicalCheckpointTime)) / 1000);
+            if (timeDifferenceDeltaSeconds > 0) {
+                appState.stopwatch.runtimeSeconds += timeDifferenceDeltaSeconds;
+            }
+        }
+        // Restart ticking routine interval loops safely
+        stopwatchIntervalInstance = setInterval(() => {
+            appState.stopwatch.runtimeSeconds++;
+            updateStopwatchVisualDisplayFrame();
+            localStorage.setItem("nexus-stopwatch-exit-timestamp", Date.now().toString());
         }, 1000);
-    } else if (!shouldRunBool && appState.stopwatch.running) {
-        appState.stopwatch.running = false;
-        clearInterval(appState.stopwatch.token);
-        logSystemChange(`Focus engine tracking session suspended at duration: ${formatStopwatchTimestamp(appState.stopwatch.seconds)}`);
     }
 }
 
-function resetFocusClock() {
-    appState.stopwatch.running = false;
-    clearInterval(appState.stopwatch.token);
-    appState.stopwatch.seconds = 0;
-    document.getElementById("stopwatchDisplay").innerText = "00:00:00";
-    logSystemChange("Focus sprint tracking database variables cleared down to absolute zero index arrays.");
+function startFocusTimerSprintEngine() {
+    if (appState.stopwatch.isActive) return;
+    appState.stopwatch.isActive = true;
+    logHistoricalChangeStreamEvent("Initiated focus sprint interval countdown engine sequence.");
+    saveApp();
+    
+    stopwatchIntervalInstance = setInterval(() => {
+        appState.stopwatch.runtimeSeconds++;
+        updateStopwatchVisualDisplayFrame();
+        localStorage.setItem("nexus-stopwatch-exit-timestamp", Date.now().toString());
+    }, 1000);
+    spawnToastNotificationBanner("Focus sprint engine active. Happy hacking!", "success");
 }
 
-function formatStopwatchTimestamp(totalSecs) {
-    const hrs = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
-    const mins = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
-    const secs = String(totalSecs % 60).padStart(2, '0');
-    return `${hrs}:${mins}:${secs}`;
+function pauseFocusTimerSprintEngine() {
+    if (!appState.stopwatch.isActive) return;
+    appState.stopwatch.isActive = false;
+    clearInterval(stopwatchIntervalInstance);
+    logHistoricalChangeStreamEvent(`Paused focus timer countdown sequence at checkpoint marker [${document.getElementById("stopwatchDisplay").innerText}].`);
+    saveApp();
+    spawnToastNotificationBanner("Focus sprint interval split paused.", "danger");
 }
 
-// Sync Global State Config Overrides directly with UI Frame nodes
-function syncUIModeAndTheme() {
-    document.body.className = ""; // Wipe configurations cleanly
-    document.body.classList.add(appState.currentTheme);
-    document.body.classList.add(`mode-${appState.currentMode}-view`);
-    document.getElementById("currentModeBadge").innerText = `${appState.currentMode.toUpperCase()} PROFILE STATE`;
+function resetFocusTimerSprintEngine() {
+    appState.stopwatch.isActive = false;
+    appState.stopwatch.runtimeSeconds = 0;
+    clearInterval(stopwatchIntervalInstance);
+    updateStopwatchVisualDisplayFrame();
+    localStorage.removeItem("nexus-stopwatch-exit-timestamp");
+    logHistoricalChangeStreamEvent("Reset structural focus sprint cycle metric registers to absolute zero.");
+    saveApp();
+    spawnToastNotificationBanner("Focus timer registers reset to absolute zero.", "danger");
 }
 
-// Native Window HUD Warning notification setups
-function spawnToastMessage(msg, type = "success") {
-    const holder = document.getElementById("toastNotificationContainer");
-    if (!holder) return;
+function updateStopwatchVisualDisplayFrame() {
+    const totalSeconds = appState.stopwatch.runtimeSeconds;
+    const computedHours = Math.floor(totalSeconds / 3600).toString().padStart(2, "0");
+    const computedMinutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, "0");
+    const computedSeconds = (totalSeconds % 60).toString().padStart(2, "0");
+    
+    const displayNode = document.getElementById("stopwatchDisplay");
+    if (displayNode) displayNode.innerText = `${computedHours}:${computedMinutes}:${computedSeconds}`;
+}
 
-    const banner = document.createElement("div");
-    banner.className = `toast-alert-banner alert-${type}`;
-    banner.innerText = msg;
+/* ==========================================================================
+   ZIA AI BOT DIRECTIVE COMMAND INTERPRETER TERMINAL PIPELINE
+   ========================================================================== */
+function executeZiaCommandPipelineProcessor() {
+    const botInputField = document.getElementById("botInputField");
+    const feedbackConsolePreNode = document.getElementById("botConsoleOutput");
+    const statusDotNode = document.getElementById("botStatusDot");
 
-    holder.appendChild(banner);
+    const rawInputStringToken = botInputField.value.trim();
+    if (!rawInputStringToken) return;
+
+    if (statusDotNode) statusDotNode.style.background = "#eab308"; // Working yellow status animation
+    feedbackConsolePreNode.innerText = "Zia is compiling command sequence vectors...";
 
     setTimeout(() => {
+        if (statusDotNode) statusDotNode.style.background = "#a855f7"; // Reset to default cozy purple
+
+        const standardizedTokenInput = rawInputStringToken.toLowerCase();
+        let evaluatedBotFeedbackLogString = "";
+
+        if (standardizedTokenInput.startsWith("add ")) {
+            // Directive Parsing Logic Format example: add Complete assignment /board:vtu /priority:High
+            const rawPayloadString = rawInputStringToken.substring(4);
+            
+            let targetBoardKeyword = "general";
+            let targetPriorityKeyword = "Medium";
+            let purifiedTaskTitleString = rawPayloadString;
+
+            if (purifiedTaskTitleString.includes("/board:")) {
+                const pieces = purifiedTaskTitleString.split("/board:");
+                const boardTokenPiece = pieces[1].split(" ")[0];
+                targetBoardKeyword = boardTokenPiece.trim();
+                purifiedTaskTitleString = purifiedTaskTitleString.replace(`/board:${boardTokenPiece}`, "");
+            }
+
+            if (purifiedTaskTitleString.includes("/priority:")) {
+                const pieces = purifiedTaskTitleString.split("/priority:");
+                const priorityTokenPiece = pieces[1].split(" ")[0];
+                targetPriorityKeyword = priorityTokenPiece.trim();
+                // Standardize casing to match enum requirements
+                if (targetPriorityKeyword.toLowerCase() === "high") targetPriorityKeyword = "High";
+                if (targetPriorityKeyword.toLowerCase() === "medium") targetPriorityKeyword = "Medium";
+                if (targetPriorityKeyword.toLowerCase() === "low") targetPriorityKeyword = "Low";
+                purifiedTaskTitleString = purifiedTaskTitleString.replace(`/priority:${priorityTokenPiece}`, "");
+            }
+
+            purifiedTaskTitleString = purifiedTaskTitleString.replace(/\s+/g, " ").trim();
+
+            const uniqueTaskId = "task-" + Date.now() + "-" + Math.floor(Math.random()*100);
+            const automatedTaskSchema = {
+                id: uniqueTaskId,
+                title: purifiedTaskTitleString,
+                tags: ["Zia Quick Ingestion"],
+                board: targetBoardKeyword,
+                date: new Date().toISOString().slice(0, 10),
+                priority: targetPriorityKeyword,
+                status: "backlog",
+                attachedFileName: null,
+                attachedFileDataStream: null
+            };
+
+            appState.tasks.push(automatedTaskSchema);
+            logHistoricalChangeStreamEvent(`Zia automated ingestion script compiled task card "${purifiedTaskTitleString}" inside segment [${targetBoardKeyword.toUpperCase()}].`);
+            saveApp();
+            renderAll();
+
+            evaluatedBotFeedbackLogString = `✦ BOOM! Zia has systematically ingested that task entry right into the system engine layout: \n\n` +
+                                             `• Task Identifier: "${purifiedTaskTitleString}"\n` +
+                                             `• Cluster Core Segment Target: "${targetBoardKeyword.toUpperCase()}"\n` +
+                                             `• Priority Level Matrix Layer: ${targetPriorityKeyword}\n\n` +
+                                             `Check the backlog column, boss! Let's get to work! 🚀`;
+            spawnToastNotificationBanner("Task injected via Zia chat.", "success");
+        }
+        else if (standardizedTokenInput.includes("hello") || standardizedTokenInput.includes("hi") || standardizedTokenInput.includes("hey")) {
+            evaluatedBotFeedbackLogString = `Hey there, boss! Zia is loaded up and fully optimized to help you coordinate this dev sprint. \n\nYou can ask me to write a task for you using explicit inline directives like:\n"add Finish physics engine sandbox integration /board:dev /priority:High"`;
+        }
+        else if (standardizedTokenInput.includes("status") || standardizedTokenInput.includes("metrics") || standardizedTokenInput.includes("velocity")) {
+            const totalsCount = appState.tasks.length;
+            const completeCount = appState.tasks.filter(t => t.status === "completed").length;
+            
+            evaluatedBotFeedbackLogString = `✦ COMPILED WORKSPACE METRIC LOG MATRIX:\n\n` +
+                                             `• Aggregate Ingested Task Cards Volume: ${totalsCount} items\n` +
+                                             `• Milestones Met: ${completeCount} completed cards\n` +
+                                             `• Display Mode Configuration: ${appState.currentMode.toUpperCase()}\n\n` +
+                                             `You are running an incredibly tight workflow today. Let's clear out a few more backlog items!`;
+        }
+        else if (standardizedTokenInput.includes("clear") || standardizedTokenInput.includes("purge") || standardizedTokenInput.includes("wipe")) {
+            appState.tasks = []; 
+            appState.activity = []; 
+            saveApp(); 
+            renderAll();
+            evaluatedBotFeedbackLogString = `✦ COMPLETE DATABASE PURGE EXECUTION COMPLETE.\n \nEverything is gone, clean slates across all vectors! Let's start building the next generation engine layout from ground zero.  🌪️✨ `;
+            spawnToastNotificationBanner("Workspace entirely purged.", "danger");
+        }
+        else {
+            evaluatedBotFeedbackLogString = `Hmm, Zia is thinking... I didn't quite catch that exact directive pattern! \nYou can say things like:\n• "hi" or "hello" to check in on me.\n• "add [Task name] /board:[Name] /priority:[High]" to quickly throw cards on your board.\n• "status" to pull instant workspace velocity statistics.`;
+        }
+        
+        feedbackConsolePreNode.innerText = evaluatedBotFeedbackLogString;
+        botInputField.value = "";
+    }, 300);
+}
+
+/* ==========================================================================
+   UTILITY HELPER INTERFACES
+   ========================================================================== */
+function spawnToastNotificationBanner(message, type = "success") {
+    const toastContainer = document.getElementById("toastNotificationContainer");
+    if (!toastContainer) return;
+
+    const banner = document.createElement("div");
+    banner.classList.add("toast-alert-banner");
+    if (type === "danger") banner.classList.add("alert-danger");
+    if (type === "success") banner.classList.add("alert-success");
+
+    banner.innerText = message;
+    toastContainer.appendChild(banner);
+
+    // Fade and self destruction timelines 
+    setTimeout(() => {
         banner.classList.add("dismissing-out");
-        banner.addEventListener("animationend", () => { banner.remove(); });
-    }, 3500);
+        banner.addEventListener("animationend", () => banner.remove());
+    }, 4000);
 }
 
-function startLiveClockEngine() {
-    const subtitle = document.getElementById("liveStatusSubtitle");
-    if (!subtitle) return;
-    setInterval(() => {
-        const timestamp = new Date().toLocaleTimeString();
-        subtitle.innerText = `System Status Matrix Active • Current Time Vector: ${timestamp} • Engine Nodes Stable`;
-    }, 1000);
-}
-
-function escapeHTMLMarkup(str) {
-    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+function escapeHTMLMarkupCharacters(rawString) {
+    if (!rawString) return "";
+    return rawString
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
 }
