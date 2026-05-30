@@ -3,360 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus Board - Advanced Framework-Free Workspace Engine</title>
+    <title>Nexus Board Task Management System - Enterprise Core</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* --- CORE DESIGN REPOSITORY VARIABLES --- */
-        :root {
-            --base-font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            --transition-velocity: 0.22s ease-in-out;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: var(--base-font-family);
-            background-color: var(--app-background);
-            color: var(--text-primary);
-            transition: background var(--transition-velocity), color var(--transition-velocity);
-            overflow-x: hidden;
-        }
-
-        /* --- THEME SKIN SPECIFICATION MATRICES --- */
-        .theme-focus-view {
-            --app-background: #ffffff;
-            --text-primary: #0f172a;
-            --header-background: #f8fafc;
-            --column-inner-bg: #f1f5f9;
-            --card-surface-bg: #ffffff;
-            --border-token-color: #cbd5e1;
-            --accent-glow: rgba(59, 130, 246, 0.1);
-        }
-
-        .theme-dev-view {
-            --base-font-family: 'JetBrains Mono', 'Courier New', monospace;
-            --app-background: #090d16;
-            --text-primary: #f8fafc;
-            --header-background: #0b132b;
-            --column-inner-bg: #1c2541;
-            --card-surface-bg: #0b132b;
-            --border-token-color: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.3);
-        }
-
-        .theme-cyberpunk {
-            --base-font-family: Impact, sans-serif;
-            --app-background: #000000;
-            --text-primary: #00ff66;
-            --header-background: #111111;
-            --column-inner-bg: #222222;
-            --card-surface-bg: #111111;
-            --border-token-color: #ff0055;
-            --accent-glow: rgba(255, 0, 85, 0.4);
-        }
-
-        /* --- GLOBAL HEADER & METRICS DESK --- */
-        .nexus-global-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 30px;
-            background-color: var(--header-background);
-            border-bottom: 1px solid var(--border-token-color);
-        }
-
-        .brand-text {
-            font-size: 18pt;
-            font-weight: 900;
-            margin: 0;
-            letter-spacing: -0.5px;
-        }
-
-        .authors-tag {
-            font-size: 9pt;
-            margin: 2px 0 0 0;
-            color: #64748b;
-        }
-
-        .telemetry-dashboard {
-            display: flex;
-            gap: 25px;
-            align-items: center;
-        }
-
-        .metric-container {
-            font-size: 10pt;
-            background: var(--column-inner-bg);
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--border-token-color);
-        }
-
-        .metric-container .lbl { color: #64748b; margin-right: 5px; }
-        .metric-container .val { font-weight: bold; }
-
-        .system-status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background-color: #10b981;
-            transition: background 0.3s ease;
-        }
-
-        /* --- TASK INGESTION DESK --- */
-        .task-staging-control-panel {
-            background: var(--header-background);
-            padding: 15px 30px;
-            border-bottom: 1px solid var(--border-token-color);
-        }
-
-        #nexus-task-generation-form {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        #nexus-task-generation-form input, #nexus-task-generation-form select {
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--border-token-color);
-            background: var(--card-surface-bg);
-            color: var(--text-primary);
-            font-family: inherit;
-        }
-
-        #nexus-task-generation-form input[type="text"] { flex: 2; min-width: 200px; }
-
-        .btn-ingest-action {
-            background: #0f172a;
-            color: #ffffff;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: opacity 0.2s;
-        }
-        .btn-ingest-action:hover { opacity: 0.9; }
-
-        /* --- MAIN WORKSPACE INTERACTIVE CANVAS --- */
-        .nexus-workspace-board-grid {
-            display: flex;
-            gap: 20px;
-            padding: 25px;
-            height: calc(100vh - 280px);
-            min-height: 400px;
-            overflow-x: auto;
-            box-sizing: border-box;
-        }
-
-        .board-column-wrapper {
-            flex: 1;
-            min-width: 280px;
-            background-color: var(--column-inner-bg);
-            border-radius: 8px;
-            border: 1px solid var(--border-token-color);
-            display: flex;
-            flex-direction: column;
-            padding: 12px;
-            box-sizing: border-box;
-        }
-
-        .column-header-banner {
-            font-size: 10pt;
-            font-weight: bold;
-            padding: 6px 10px;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-        .line-backlog { background: #e2e8f0; color: #475569; }
-        .line-progress { background: #dbeafe; color: #1e40af; }
-        .line-review { background: #fef3c7; color: #92400e; }
-        .line-completed { background: #d1fae5; color: #065f46; }
-
-        .card-injection-target-viewport {
-            flex: 1;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-
-        /* --- DYNAMIC TASK CARD LAYOUTS --- */
-        .task-card {
-            background-color: var(--card-surface-bg);
-            border: 1px solid var(--border-token-color);
-            border-radius: 6px;
-            padding: 14px;
-            margin-bottom: 12px;
-            cursor: grab;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            transition: transform var(--transition-velocity), box-shadow var(--transition-velocity);
-        }
-        .task-card:hover {
-            box-shadow: 0 4px 12px var(--accent-glow);
-            transform: translateY(-2px);
-        }
-        .task-card:active { cursor: grabbing; }
-        .dragging-active-state { opacity: 0.4; transform: scale(0.96); border: 2px dashed #3b82f6; }
-
-        /* PRIORITY INDICATORS */
-        .custom-priority-high { border-left: 4px solid #ef4444; }
-        .custom-priority-medium { border-left: 4px solid #f59e0b; }
-        .custom-priority-low { border-left: 4px solid #10b981; }
-
-        /* --- AUTOMATION PANEL TRIPLE BUFFER --- */
-        .nexus-automation-system-tray {
-            display: flex;
-            height: 140px;
-            background-color: var(--header-background);
-            border-top: 1px solid var(--border-token-color);
-            padding: 10px 20px;
-            gap: 20px;
-            box-sizing: border-box;
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-        }
-
-        .zia-shell-console-wrapper {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #0f172a;
-            border-radius: 6px;
-            padding: 8px;
-        }
-
-        .console-output-stream-window {
-            flex: 1;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 9pt;
-            color: #38bdf8;
-            margin-bottom: 4px;
-        }
-
-        #zia-terminal-input-field {
-            width: 100%;
-            background: #1e293b;
-            border: none;
-            color: #ffffff;
-            font-family: 'Courier New', monospace;
-            font-size: 9.5pt;
-            padding: 4px 8px;
-            box-sizing: border-box;
-            border-radius: 4px;
-        }
-
-        .realtime-activity-feed-panel {
-            flex: 1;
-            background: var(--card-surface-bg);
-            border: 1px solid var(--border-token-color);
-            border-radius: 6px;
-            padding: 8px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .panel-header-title {
-            font-size: 8.5pt;
-            font-weight: bold;
-            margin: 0 0 6px 0;
-            color: #64748b;
-            text-transform: uppercase;
-        }
-
-        .feed-log-list-viewport {
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        @media (max-width: 768px) {
-            .nexus-workspace-board-grid { flex-direction: column; height: auto; margin-bottom: 140px; }
-            .nexus-global-header { flex-direction: column; gap: 10px; }
-            .nexus-automation-system-tray { flex-direction: column; height: auto; position: relative; }
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .code-font { font-family: 'JetBrains Mono', monospace; }
+        .board-column { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .column-drag-over { background-color: #e2e8f0; border-color: #6366f1; border-style: dashed; }
+        .task-card { transition: transform 0.2s, box-shadow 0.2s; cursor: grab; }
+        .task-card:active { cursor: grabbing; transform: scale(0.98); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<body class="theme-focus-view">
+<body class="bg-slate-900 text-slate-100 min-h-screen antialiased">
 
-    <header class="nexus-global-header">
-        <div class="branding-group">
-            <h1 class="brand-text">NEXUS // BOARD v11.0</h1>
-            <p class="authors-tag">Engineered by: Prajwal Shetty S &amp; Rakshit R</p>
-        </div>
-        
-        <div class="telemetry-dashboard">
-            <div class="metric-container">
-                <span class="lbl">Efficiency Quotient:</span>
-                <span id="metric-efficiency-value" class="val">0%</span>
+    <header class="bg-slate-950 border-b border-slate-800 sticky top-0 z-50 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 p-2.5 rounded-xl text-white font-bold tracking-wider text-xl shadow-lg shadow-indigo-500/20">Ω</div>
+                <div>
+                    <h1 class="text-lg font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">NEXUS OPERATIONAL BOARD</h1>
+                    <p class="text-xs text-indigo-400 font-mono tracking-widest uppercase">Task Lifecycle & State Machine // BCS403</p>
+                </div>
             </div>
-            <div class="metric-container">
-                <span class="lbl">Active Balance:</span>
-                <span id="metric-active-count" class="val">0</span>
+            <div class="flex items-center space-x-4">
+                <div class="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 text-xs flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-slate-400 font-mono">Gateway System:</span>
+                    <span id="gateway-status" class="font-bold text-emerald-400 font-mono">ONLINE</span>
+                </div>
+                <div class="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 text-xs text-slate-400 font-mono">
+                    Buffered Logs: <span id="telemetry-count" class="text-indigo-400 font-bold">0</span>
+                </div>
             </div>
-            <div class="system-status-indicator" id="compliance-status-dot" title="Ergonomic Break Tracker"></div>
-        </div>
-
-        <div class="theme-profile-selector-zone">
-            <select id="theme-configuration-dropdown" onchange="mutateSystemStyleSkin(this.value)">
-                <option value="theme-focus-view">Focus Clean Grid</option>
-                <option value="theme-dev-view">Terminal Monospaced</option>
-                <option value="theme-cyberpunk">Cyberpunk Neon</option>
-            </select>
         </div>
     </header>
 
-    <section class="task-staging-control-panel">
-        <form id="nexus-task-generation-form" onsubmit="executeTaskIngestionLoop(event)">
-            <input type="text" id="input-task-title" placeholder="Enter card descriptive title..." required />
-            <select id="input-task-priority">
-                <option value="Low">Low Priority</option>
-                <option value="Medium">Medium Priority</option>
-                <option value="High">High Priority</option>
-            </select>
-            <input type="date" id="input-task-deadline" required />
-            <input type="text" id="input-task-tags" placeholder="Tags separated by commas (e.g. core, canvas)" />
-            <button type="submit" class="btn-ingest-action">Mount Card Node</button>
-        </form>
-    </section>
+    <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        
+        <section class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-xl">
+            <h2 class="text-sm font-bold text-indigo-400 uppercase tracking-widest font-mono mb-4 flex items-center gap-2">
+                <span>⚡</span> Task Initialization Form Engine
+            </h2>
+            <form id="nexus-task-form" onsubmit="handleTaskSubmission(event)" class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <div class="lg:col-span-2">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Task Title Core Header</label>
+                    <input type="text" id="task-title" required placeholder="Write operational target parameters..." 
+                        class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Priority Weight</label>
+                    <select id="task-priority" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                        <option value="low">Low Priority Matrix</option>
+                        <option value="medium" selected>Medium Operational</option>
+                        <option value="high">High Mission Critical</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-lg shadow-indigo-600/20 active:scale-[0.98] transition-all">
+                        Commit Core Task
+                    </button>
+                </div>
+            </form>
+        </section>
 
-    <main class="nexus-workspace-board-grid">
-        <div class="board-column-wrapper" id="zone-backlog" ondragover="allowDropInterceptor(event)" ondrop="executeDropCommit(event, 'backlog')">
-            <div class="column-header-banner line-backlog">Backlog Buffer</div>
-            <div class="card-injection-target-viewport" id="col-backlog"></div>
-        </div>
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="bg-slate-950 rounded-2xl border border-slate-800 flex flex-col max-h-[700px] shadow-lg">
+                <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 rounded-t-2xl">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                        <h3 class="font-bold text-sm tracking-wide text-slate-200">TO-DO REGISTRY</h3>
+                    </div>
+                    <span id="count-todo" class="bg-slate-900 px-2 py-0.5 rounded text-xs font-mono font-bold text-slate-400 border border-slate-800">0</span>
+                </div>
+                <div id="col-todo" class="board-column p-4 space-y-4 overflow-y-auto flex-1 min-h-[150px]" ondragover="allowDropTransfer(event)" ondragleave="handleDragLeave(event)" ondrop="executeDropMutation(event, 'todo')">
+                    </div>
+            </div>
 
-        <div class="board-column-wrapper" id="zone-progress" ondragover="allowDropInterceptor(event)" ondrop="executeDropCommit(event, 'progress')">
-            <div class="column-header-banner line-progress">In Progress</div>
-            <div class="card-injection-target-viewport" id="col-progress"></div>
-        </div>
+            <div class="bg-slate-950 rounded-2xl border border-slate-800 flex flex-col max-h-[700px] shadow-lg">
+                <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 rounded-t-2xl">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                        <h3 class="font-bold text-sm tracking-wide text-slate-200">IN-FLIGHT EXECUTION</h3>
+                    </div>
+                    <span id="count-doing" class="bg-slate-900 px-2 py-0.5 rounded text-xs font-mono font-bold text-slate-400 border border-slate-800">0</span>
+                </div>
+                <div id="col-doing" class="board-column p-4 space-y-4 overflow-y-auto flex-1 min-h-[150px]" ondragover="allowDropTransfer(event)" ondragleave="handleDragLeave(event)" ondrop="executeDropMutation(event, 'doing')">
+                    </div>
+            </div>
 
-        <div class="board-column-wrapper" id="zone-review" ondragover="allowDropInterceptor(event)" ondrop="executeDropCommit(event, 'review')">
-            <div class="column-header-banner line-review">Quality Review</div>
-            <div class="card-injection-target-viewport" id="col-review"></div>
-        </div>
+            <div class="bg-slate-950 rounded-2xl border border-slate-800 flex flex-col max-h-[700px] shadow-lg">
+                <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 rounded-t-2xl">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        <h3 class="font-bold text-sm tracking-wide text-slate-200">RESOLVED MATRIX</h3>
+                    </div>
+                    <span id="count-done" class="bg-slate-900 px-2 py-0.5 rounded text-xs font-mono font-bold text-slate-400 border border-slate-800">0</span>
+                </div>
+                <div id="col-done" class="board-column p-4 space-y-4 overflow-y-auto flex-1 min-h-[150px]" ondragover="allowDropTransfer(event)" ondragleave="handleDragLeave(event)" ondrop="executeDropMutation(event, 'done')">
+                    </div>
+            </div>
+            
+        </section>
 
-        <div class="board-column-wrapper" id="zone-completed" ondragover="allowDropInterceptor(event)" ondrop="executeDropCommit(event, 'completed')">
-            <div class="column-header-banner line-completed">Verified Complete</div>
-            <div class="card-injection-target-viewport" id="col-completed"></div>
-        </div>
+        <section class="bg-slate-950 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+            <div class="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="text-xs font-bold text-slate-400 uppercase font-mono tracking-widest flex items-center gap-2">
+                    <span>🖥️</span> Nexus System Engine Live Telemetry Audit Streams
+                </h3>
+                <button onclick="clearConsoleLogs()" class="text-[10px] bg-slate-900 border border-slate-800 text-slate-400 font-mono px-2 py-1 rounded hover:bg-slate-800 transition-colors">Flush Terminal Buffer</button>
+            </div>
+            <div id="system-telemetry-console" class="code-font p-4 bg-black h-40 overflow-y-auto text-xs text-emerald-400 space-y-1.5">
+                <div class="text-slate-500">[SYSTEM INIT] Awaiting instruction sets... Boot schema complete.</div>
+            </div>
+        </section>
     </main>
 
-    <footer class="nexus-automation-system-tray">
-        <div class="zia-shell-console-wrapper">
-            <div class="console-output-stream-window" id="zia-console-stream">
-                <p style="margin:2px 0; color:#10b981;">&gt; Zia Automation Core v11.0 online. Pipeline status: READY.</p>
-            </div>
-            <div class="console-input-row-group">
-                <input type="text" id="zia-terminal-input-field" placeholder="Input structural automation directive (status, clear, clean completed)..." onkeydown="if(event.key==='Enter') { executeZiaTerminalCommand(this.value); this.value=''; }" />
-            </div>
-        </div>
-        
-        <div class="realtime-activity-feed-panel">
-            <h3 class="panel-header-title">FIFO Core Event Activity Log</h3>
-            <div class="feed-log-list-viewport" id="nexus-activity-feed-target"></div>
-        </div>
+    <footer class="text-center text-[11px] text-slate-600 py-8 font-mono border-t border-slate-950 mt-12">
+        Nexus Operational Board Core Module V4.0.0 // Visvesvaraya Technological University Project Blueprint.
     </footer>
 
     <script src="nexus_core_logic.js"></script>
